@@ -1,0 +1,644 @@
+#!/bin/bash
+#
+# vim: set syntax=bash ts=4 sw=4 sts=4 et :
+
+##
+# Qubes qvm-* state, and module tests (command line interface)
+#
+#   ==================================================
+#   Commandline examples for running modules or states
+#   ==================================================
+#
+#   Show documentation (and usage) for a module
+#   -------------------------------------------
+#   qubesctl --doc qvm.start
+#
+#   Execute module directly
+#   -----------------------
+#   qubesctl qvm.kill salt-testvm
+#
+#   Execute module via state file (allows test mode)
+#   ------------------------------------------------
+#   qubesctl state.single [test=true] qvm.kill salt-testvm
+##
+
+#===============================================================================
+#                         Configurable Variables
+#===============================================================================
+
+#-------------------------------------------------------------------------------
+# Values can be set for the variables in this section as follows
+#   0: disabled (can also comment out to disable)
+#   1: enabled
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+# Shows documentation and usage of module before running
+#-------------------------------------------------------------------------------
+SHOW_DOCS=1
+
+#-------------------------------------------------------------------------------
+# Tests module functions by executing them via state files
+#
+# - This is closest to what happens when running a salt 'highstate'
+# - This mode does support TEST_MODE or DEBUG_MODE
+#-------------------------------------------------------------------------------
+STATE_MODE=1
+
+#-------------------------------------------------------------------------------
+# Tests modules by executing them directly
+#
+# - Modules results can be used directly from commandline.  Combine with
+#   output format to taylor results for shell scripts, etc
+# - This mode does not support TEST_MODE or DEBUG_MODE
+#-------------------------------------------------------------------------------
+MODULE_MODE=1
+
+#-------------------------------------------------------------------------------
+# Shows documentation and usage of module before running.
+
+# - Valid values are:
+#   all, garbage, trace, debug, info, warning, error, critical, quiet
+#-------------------------------------------------------------------------------
+DEBUG_MODE='warning'
+
+#-------------------------------------------------------------------------------
+# Enables salt test mode.
+#
+# - Actions will not actually run but will return
+#   expected results.  Useful for testing modules or a dry run.
+#
+# WARNING: Some modules may not implement test correctly and may run
+#-------------------------------------------------------------------------------
+TEST_MODE=1
+AUTO_TEST_MODE=1  # Runs first without TEST_MODE and then with TEST_MODE
+
+#-------------------------------------------------------------------------------
+# Test VM name to use when running tests.
+#
+# WARNING: this VM will be destroyed and manipulated so DO NOT use an existing
+#          virtual machine name
+#-------------------------------------------------------------------------------
+TEST_VM_NAME='salt-testvm6'
+
+#-------------------------------------------------------------------------------
+# List of tests to run.  Comment out any that you wish not to run.
+#-------------------------------------------------------------------------------
+TESTS=(
+    'qvm-kill'              # COMPLETE
+  # 'qvm-halted'
+  # 'qvm-absent'
+  # 'qvm-missing'
+  # 'qvm-present'
+  # 'qvm-exists'
+  # 'qvm-prefs'
+  # 'qvm-service'
+  # 'qvm-start'
+  # 'qvm-running'
+  # 'qvm-pause'
+  # 'qvm-unpause'
+    'qvm-shutdown'
+  # 'qvm-run'
+  # 'qvm-clone'
+
+  # 'qvm-vm',
+  )
+
+
+#===============================================================================
+#                           Various configurations
+#
+#                   DO NOT EDIT ANYTHING BEYOND THIS POINT
+#===============================================================================
+# Set documentation mode
+if [ "0${SHOW_DOCS}" -eq 1 ]; then
+  DOCUMENTATION='--doc'
+else
+  DOCUMENTATION=''
+fi
+
+# Set test mode
+if [ "0${TEST_MODE}" -eq 1 ]; then
+  TEST='test=true'
+else
+  TEST=''
+fi
+
+# Set debug mode
+if [ -n "${DEBUG_MODE}" ]; then
+  DEBUG="--log-level=${DEBUG_MODE}"
+else
+  DEBUG=''
+fi
+
+
+#===============================================================================
+#                               Functions
+#===============================================================================
+# ------------------------------------------------------------------------------
+# Checks if the passed element exists in passed array
+# $1: Element to check for
+# $2: Array to check for element in
+#
+# Returns 0 if True, or 1 if False
+# ------------------------------------------------------------------------------
+elementIn () {
+    local element
+    for element in "${@:2}"; do [[ "$element" == "$1" ]] && return 0; done
+    return 1
+}
+
+
+output_demo () {
+    local module="${1}"
+    shift
+
+    OUTPUT=(
+        'key'
+        'yaml'
+        'overstatestage'
+        'newline_values_only'
+        'pprint'
+        'txt'
+        'raw'
+        'virt_query'
+        'compact'
+        'json'
+        'highstate'
+        'nested'
+        'quiet'
+        'no_return'
+    )
+
+    for format in "${OUTPUT[@]}"; do
+        echo $format
+        echo '================================================================='
+        echo 'FULL ------------------------------------------------------------'
+        qubesctl state.single test=false --output=$format --state-output=full "${module/-/.}" "${@}" "${DEBUG}"
+        echo 'TERSE -----------------------------------------------------------'
+        qubesctl state.single test=false --output=$format --state-output=terse "${module/-/.}" "${@}" "${DEBUG}"
+        echo 'MIXED -----------------------------------------------------------'
+        qubesctl state.single test=false --output=$format --state-output=mixed "${module/-/.}" "${@}" "${DEBUG}"
+        echo 'CHANGES ---------------------------------------------------------'
+        qubesctl state.single test=false --output=$format --state-output=changes "${module/-/.}" "${@}" "${DEBUG}"
+        echo 'FILTER ----------------------------------------------------------'
+        qubesctl state.single test=false --output=$format --state-output=filter "${module/-/.}" "${@}" "${DEBUG}"
+        echo
+    done
+}
+
+
+run_docs() {
+    local module="${1}"
+    shift
+
+    # Show documentation before running module
+    if [ "0${SHOW_DOCS}" -eq 1 ]; then
+      qubesctl "${DOCUMENTATION}" "${module/-/.}"
+    fi
+}
+
+
+run_module() {
+    local module="${1}"
+    shift
+
+    echo "Testing module: '"${module}"' ("${module/-/.}")..."
+
+    # Show documentation before running module
+    run_docs "${module/-/.}"
+
+    # Direct module access mode
+    if [ "0${MODULE_MODE}" -eq 1 ]; then
+        qubesctl "${module/-/.}" "${@}"
+    fi
+}
+
+
+run_state() {
+    local module="${1}"
+    shift
+
+    echo "Testing state: '"${module}"' ("${module/-/.}")..."
+
+    # State mode
+    if [ "0${STATE_MODE}" -eq 1 ]; then
+        if [ "0${AUTO_TEST_MODE}" -eq 1 ]; then
+            qubesctl state.single test=true "${module/-/.}" "${@}" "${DEBUG}"
+            qubesctl state.single test=false "${module/-/.}" "${@}" "${DEBUG}"
+        else
+            qubesctl state.single "${TEST}" "${module/-/.}" "${@}" "${DEBUG}"
+        fi
+    fi
+}
+
+
+run() {
+    run_module "${@}"
+    run_state "${@}"
+}
+
+
+#===============================================================================
+#                      Qubes + Salt Commandline Tests
+#===============================================================================
+
+#===============================================================================
+# Test qubes-dom0-update                                       qubes-dom0-update
+#===============================================================================
+module='qubes-dom0-update'
+if elementIn "${module}" in "${TESTS[@]}"; then
+    #run_module pkg.install git
+    run_state pkg.installed git
+fi
+
+#===============================================================================
+# Kill VM                                                               qvm-kill
+#===============================================================================
+module='qvm-kill'
+if elementIn "${module}" in "${TESTS[@]}"; then
+    args=(
+        "${TEST_VM_NAME}"
+    )
+    run "${module/-/.}" "${args[@]}"
+fi
+
+#===============================================================================
+# Confirm VM is halted (halted)                                       qvm-halted
+#===============================================================================
+module='qvm-halted'
+if elementIn "${module}" in "${TESTS[@]}"; then
+    args=(
+        "${TEST_VM_NAME}"
+    )
+    run_module qvm.state "${args[@]}" halted
+    run_state "${module/-/.}" "${args[@]}"
+fi
+
+#===============================================================================
+# Remove VM                                                           qvm-absent
+#===============================================================================
+module='qvm-absent'
+if elementIn "${module}" in "${TESTS[@]}"; then
+    args=(
+        "${TEST_VM_NAME}"
+        #"flags=[just-db, shutdown, force-root, quiet]"
+    )
+    # Not running module as well as state since we can only remove once
+    run_docs "${module/-/.}" "${args[@]}"
+    run_state "${module/-/.}" "${args[@]}"
+    #run_module "${module/-/.}" "${args[@]}"
+fi
+
+#===============================================================================
+# Confirm VM does not exist                                          qvm-missing
+#===============================================================================
+module='qvm-missing'
+if elementIn "${module}" in "${TESTS[@]}"; then
+    args=(
+        "${TEST_VM_NAME}"
+        "flags=[quiet]"
+    )
+    # Not running module as well as state since we can only remove once
+    run_module qvm.check "${args[@]}" missing
+    run_state "${module/-/.}" "${args[@]}"
+fi
+
+#===============================================================================
+# Create VM                                                          qvm-present
+#===============================================================================
+#AUTO_TEST_MODE=0  # Only test; don't execute
+#TEST='test=true'
+
+module='qvm-present'
+if elementIn "${module}" in "${TESTS[@]}"; then
+    args=(
+        "${TEST_VM_NAME}"
+        "template=fedora-21"
+        "label=red"
+        "mem=3000"
+        "vcpus=4"
+        #"root-move-from=</path/xxx>"
+        #"root-copy-from=</path/xxx>"
+        "flags=[proxy]"
+        #"flags=[net, proxy, standalone, hvm, hvm-template, internal, force-root, quiet]"
+    )
+    # Not running module as well as state since we can only remove once
+    run_docs "${module/-/.}" "${args[@]}"
+    run_state "${module/-/.}" "${args[@]}"
+    #run_module "${module/-/.}" "${args[@]}"
+fi
+
+#===============================================================================
+# Confirm vm exists                                                   qvm-exists
+#===============================================================================
+module='qvm-exists'
+if elementIn "${module}" in "${TESTS[@]}"; then
+    args=(
+        "${TEST_VM_NAME}"
+        "flags=[quiet]"
+    )
+    # Not running module as well as state since we can only remove once
+    run_module qvm.check "${args[@]}" exists
+    run_state "${module/-/.}" "${args[@]}"
+fi
+
+
+#===============================================================================
+# Modify VM preferences                                                qvm-prefs
+#===============================================================================
+# XXX: missing sys-firewall network... FIX here and it main test file
+#$if 'qvm-prefs' in tests:
+#  qvm-prefs-id:
+#    qvm.prefs:
+#      - name: $test_vm_name
+#      - action: set
+#      - label: green  # red|yellow|green|blue|purple|orange|gray|black
+#      - template: debian-jessie
+#      - memory: 400
+#      - maxmem: 4000
+#      - include-in-backups: false  # true|false
+#      # pcidevs:              [string,]
+#      # netvm:                <string>
+#      # kernel:               <string>
+#      # vcpus:                <int>
+#      # kernelopts:           <string>
+#      # mac:                  <string> (auto)
+#      # debug:                true|(false)
+#      # default-user:         <string>
+#      # qrexec-timeout:       <int> (60)
+#      # internal:             true|(false)
+#      # autostart:            true|(false)
+#      # flags:
+#        # force-root
+#      # The following keys do not seem to exist in Qubes prefs DB
+#      # drive:              ''
+#      # timezone:           UTC
+#      # qrexec-installed:   true
+#      # guiagent-installed:  true
+#      # seamless-gui-mode:  false
+module='qvm-prefs'
+if elementIn "${module}" in "${TESTS[@]}"; then
+  args=(
+      "${TEST_VM_NAME}"
+  )
+  run "${module/-/.}" "${args[@]}"
+fi
+
+#===============================================================================
+# Modify VM services                                                 qvm-service
+#===============================================================================
+#$if 'qvm-service' in tests:
+#  qvm-service-id:
+#    qvm.service:
+#      - name: $test_vm_name
+#      - enable:
+#        - test
+#        - test2
+#        - another_test
+#        - another_test2
+#        - another_test3
+#      - disable:
+#        - meminfo-writer
+#        - test3
+#        - test4
+#        - another_test4
+#        - another_test5
+#        - default:
+#          - another_test5
+#          - does_not_exist
+#      # list: [string,]
+module='qvm-service'
+if elementIn "${module}" in "${TESTS[@]}"; then
+  args=(
+      "${TEST_VM_NAME}"
+  )
+  run "${module/-/.}" "${args[@]}"
+fi
+
+#===============================================================================
+# Start VM                                                             qvm-start
+#===============================================================================
+#$if 'qvm-start' in tests:
+#  qvm-start-id:
+#    qvm.start:
+#      - name: $test_vm_name
+#      # drive: <string>
+#      # hddisk: <string>
+#      # cdrom: <string>
+#      # custom-config: <string>
+#      # flags:
+#        # quiet  # *** salt default ***
+#        # no-guid  # *** salt default ***
+#        # tray
+#        # dvm
+#        # debug
+#        # install-windows-tools
+module='qvm-start'
+if elementIn "${module}" in "${TESTS[@]}"; then
+  args=(
+      "${TEST_VM_NAME}"
+  )
+  run "${module/-/.}" "${args[@]}"
+fi
+
+#===============================================================================
+# Confirm VM is running                                              qvm-running
+#===============================================================================
+module='qvm-running'
+if elementIn "${module}" in "${TESTS[@]}"; then
+    args=(
+        "${TEST_VM_NAME}"
+    )
+    run_module qvm.state "${args[@]}" running
+    run_state "${module/-/.}" "${args[@]}"
+fi
+
+#===============================================================================
+# Pause VM                                                             qvm-pause
+#===============================================================================
+#$if 'qvm-pause' in tests:
+#  qvm-pause-id:
+#    qvm.pause:
+#      - name: $test_vm_name
+module='qvm-pause'
+if elementIn "${module}" in "${TESTS[@]}"; then
+  args=(
+      "${TEST_VM_NAME}"
+  )
+  run "${module/-/.}" "${args[@]}"
+fi
+
+#===============================================================================
+# Unpause VM                                                         qvm-unpause
+#===============================================================================
+#$if 'qvm-unpause' in tests:
+#  qvm-unpause-id:
+#    qvm.unpause:
+#      - name: $test_vm_name
+module='qvm-unpause'
+if elementIn "${module}" in "${TESTS[@]}"; then
+  args=(
+      "${TEST_VM_NAME}"
+  )
+  run "${module/-/.}" "${args[@]}"
+fi
+
+#===============================================================================
+# Shutdown VM                                                       qvm-shutdown
+#===============================================================================
+#$if 'qvm-shutdown' in tests:
+#  qvm-shutdown-id:
+#    qvm.shutdown:
+#      - name: $test_vm_name
+#      # exclude: [exclude_list,]
+#      # flags:
+#        # quiet
+#        # force
+#        # wait
+#        # all
+#        # kill
+
+module='qvm-shutdown'
+if elementIn "${module}" in "${TESTS[@]}"; then
+    args=(
+        "${TEST_VM_NAME}"
+        "exclude=sys-net"
+        "flags=[quiet, force, wait, all, kill]"
+        #"flags=[quiet, force, wait, all, kill]"
+    )
+    run "${module/-/.}" "${args[@]}"
+fi
+
+#===============================================================================
+# Run 'gnome-terminal' in VM                                             qvm-run
+#
+# TODO: Test auto-start
+#===============================================================================
+#$if 'qvm-run' in tests:
+#  qvm-run-id:
+#    qvm.run:
+#      - name: $test_vm_name
+#      - cmd: gnome-terminal
+#      # user: <string>
+#      # exclude: [sys-net, sys-firewall]
+#      # localcmd: </dev/null>
+#      # color-output: 31
+#      - flags:
+#        # quiet
+#        - auto
+#        # tray
+#        # all
+#        # pause
+#        # unpause
+#        # pass-io
+#        # nogui
+#        # filter-escape-chars
+#        # no-filter-escape-chars
+#        # no-color-output
+module='qvm-run'
+if elementIn "${module}" in "${TESTS[@]}"; then
+  args=(
+      "${TEST_VM_NAME}"
+  )
+  run "${module/-/.}" "${args[@]}"
+fi
+
+#===============================================================================
+# Clone VM                                                             qvm-clone
+#===============================================================================
+#$if 'qvm-clone' in tests:
+#  qvm-clone-id:
+#    qvm.clone:
+#      - name: $test_vm_name
+#      - target: $'{0}-clone'.format(test_vm_name)
+#      # path:                 </path/xxx>
+#      - flags:
+#        - shutdown
+#        # quiet
+#        # force-root
+#
+#  qvm-clone-absent-id:
+#    qvm.absent:
+#      - name: $'{0}-clone'.format(test_vm_name)
+module='qvm-clone'
+if elementIn "${module}" in "${TESTS[@]}"; then
+  args=(
+      "${TEST_VM_NAME}"
+  )
+  run "${module/-/.}" "${args[@]}"
+fi
+
+#===============================================================================
+# Combined states (all qvm-* commands available within one id)           qvm-all
+#===============================================================================
+#$if 'qvm-vm' in tests:
+#  qvm-vm-id:
+#    qvm.vm:
+#      - name: $test_vm_name
+#      - absent:
+#        - flags:
+#          - shutdown
+#      - present:
+#        - template: fedora-21
+#        - label: red
+#        - mem: 3000
+#        - vcpus: 4
+#        - flags:
+#          - proxy
+#      # prefs:
+#        # label: green
+#        # template: debian-jessie
+#        # memory: 400
+#        # maxmem: 4000
+#        # include-in-backups: False
+#      # service:
+#        # disable:
+#          # test
+#          # test2
+#          # another_test
+#          # another_test2
+#          # another_test3
+#        # enable:
+#          # meminfo-writer
+#          # test3
+#          # test4
+#          # another_test4
+#          # another_test5
+#      - start: []
+#        # flags:
+#          # tray
+#          # no-guid
+#          # dvm
+#          # debug
+#          # install-windows-tools
+#          # drive: DRIVE
+#          # hddisk: DRIVE_HD
+#          # cdrom: DRIVE_CDROM
+#          # custom-config: CUSTOM_CONFIG
+#      # TODO: TEST AUTO-START
+#      - run:
+#        - cmd: gnome-terminal
+#        - flags:
+#          # user: user
+#          # exclude: [sys-net, sys-firewall]
+#          # localcmd: /dev/null
+#          # color-output: '31'
+#          # quiet
+#          # auto
+#          # tray
+#          - all
+#          # pause
+#          # unpause
+#          # pass-io
+#          # nogui
+#          # filter-escape-chars
+#          # no-filter-escape-chars
+#          # no-color-output
+module='qvm-vm'
+if elementIn "${module}" in "${TESTS[@]}"; then
+  args=(
+      "${TEST_VM_NAME}"
+  )
+  run "${module/-/.}" "${args[@]}"
+fi
