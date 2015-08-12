@@ -92,9 +92,8 @@ $if 'qvm-absent' in tests:
   qvm-absent-id:
     qvm.absent:
       - name: $test_vm_name
-      - flags:
+      # flags:
         # just-db
-        - shutdown
         # force-root
         # quiet
 
@@ -160,12 +159,12 @@ $if 'qvm-prefs-get' in tests:
   qvm-prefs-get-id:
     qvm.prefs:
       - name:               $test_vm_name
-      - action:             get
-      - label:              green
-      - template:           debian-jessie
-      - memory:             400
-      - maxmem:             4000
-      - include-in-backups: false
+      - get:
+        - label
+        - template
+        - memory
+        - maxmem
+        - include-in-backups
 
 #===============================================================================
 # Modify VM preferences                                                qvm-prefs
@@ -174,12 +173,11 @@ $if 'qvm-prefs' in tests:
   qvm-prefs-id:
     qvm.prefs:
       - name:               $test_vm_name
-      - action:             set
-      - label:              green
+      - label:              orange
       - template:           debian-jessie
       - memory:             400
       - maxmem:             4000
-      - include-in-backups: false
+      - include-in-backups: True
       - netvm:              sys-firewall
       # pcidevs:            ['04:00.0']
       # kernel:             default
@@ -193,6 +191,7 @@ $if 'qvm-prefs' in tests:
       # autostart:          true
       # flags:
         # force-root
+
       # The following keys do not seem to exist in Qubes prefs DB
       # drive:              ''
       # timezone:           UTC
@@ -356,59 +355,22 @@ $if 'qvm-vm' in tests:
       - kill: []
       - halted: []
       - absent: []
-        # flags:
-          # just-db
-          # shutdown
-          # force-root
-          # quiet
       - missing: []
-        # flags:
-          # quiet
       - present:
         - template: fedora-21
         - label: red
         - mem: 3000
         - vcpus: 4
-        # root-move-from: </path/xxx>
-        # root-copy-from: </path/xxx>
         - flags:
           - proxy
-          # hvm
-          # hvm-template
-          # net
-          # standalone
-          # internal
-          # force-root
-          # quiet
       - exists: []
-        # flags:
-          # quiet
       - prefs:
-        - action: set
         - label: green  # red|yellow|green|blue|purple|orange|gray|black
         - template: debian-jessie
         - memory: 400
         - maxmem: 4000
         - include-in-backups: false
         - netvm: sys-firewall
-        # pcidevs:              [string,]
-        # kernel:               <string>
-        # vcpus:                <int>
-        # kernelopts:           <string>
-        # mac:                  <string> (auto)
-        # debug:                true|(false)
-        # default-user:         <string>
-        # qrexec-timeout:       <int> (60)
-        # internal:             true|(false)
-        # autostart:            true|(false)
-        # flags:
-          # force-root
-        # The following keys do not seem to exist in Qubes prefs DB
-        # drive:              ''
-        # timezone:           UTC
-        # qrexec-installed:   true
-        # guiagent-installed:  true
-        # seamless-gui-mode:  false
       - service:
         - enable:
           - test
@@ -425,45 +387,12 @@ $if 'qvm-vm' in tests:
         - default:
           - another_test5
           - does_not_exist
-        # list: [string,]
       - start: []
-        # drive: <string>
-        # hddisk: <string>
-        # cdrom: <string>
-        # custom-config: <string>
-        # flags:
-          # quiet  # *** salt default ***
-          # no-guid  # *** salt default ***
-          # tray
-          # dvm
-          # debug
-          # install-windows-tools
       - running: []
       - pause: []
       - unpause: []
       - shutdown: []
-        # exclude: [exclude_list,]
-        # flags:
-          # quiet
-          # force
-          # wait
-          # all
-          # kill
       - run:
         - cmd: gnome-terminal
-        # user: <string>
-        # exclude: [sys-net, sys-firewall]
-        # localcmd: </dev/null>
-        # color-output: 31
         - flags:
-          # quiet
           - auto
-          # tray
-          # all
-          # pause
-          # unpause
-          # pass-io
-          # nogui
-          # filter-escape-chars
-          # no-filter-escape-chars
-          # no-color-output
