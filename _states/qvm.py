@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+#
+# vim: set ts=4 sw=4 sts=4 et :
 '''
 :maintainer:    Jason Mehring <nrgaway@gmail.com>
 :maturity:      new
@@ -107,7 +109,7 @@ def _state_action(_action, *varargs, **kwargs):
         status = __salt__[_action](*varargs, **kwargs)
     except (SaltInvocationError, CommandExecutionError), e:
         status = Status(retcode=1, result=False, stderr=e.message + '\n')
-    return dict(status)
+    return vars(status)
 
 
 def exists(name, *varargs, **kwargs):
@@ -145,6 +147,12 @@ def halted(name, *varargs, **kwargs):
     '''
     varargs = list(varargs)
     varargs.append('halted')
+    # Return if VM already halted (stderr will contain message if VM absent)
+    halted_status = Status(**_state_action('qvm.state', name, *varargs, **kwargs))
+    if halted_status.passed() or halted_status.stderr:
+        message = halted_status.stderr or "'{0}' is already halted.".format(name)
+        status = Status()._format(prefix='[SKIP] ', message=message)
+        return vars(status._finalize(test_mode=__opts__['test']))
     return _state_action('qvm.state', name, *varargs, **kwargs)
 
 
@@ -170,6 +178,12 @@ def kill(name, *varargs, **kwargs):
     '''
     Kill vmname (qvm-kill).
     '''
+    # Return if VM already halted (stderr will contain message if VM absent)
+    halted_status = Status(**_state_action('qvm.state', name, *['halted']))
+    if halted_status.passed():
+        message = halted_status.stderr or "'{0}' is already halted.".format(name)
+        status = Status()._format(prefix='[SKIP] ', message=message)
+        return vars(status._finalize(test_mode=__opts__['test']))
     return _state_action('qvm.kill', name, *varargs, **kwargs)
 
 
@@ -196,9 +210,8 @@ def present(name, *varargs, **kwargs):
     exists_status = Status(**_state_action('qvm.check', name, *['exists']))
     if exists_status.passed():
         message = "A VM with the name '{0}' already exists.".format(name)
-        present_status = Status()._format(prefix='[SKIP] ', message=message)
-        return dict(present_status._finalize(test_mode=__opts__['test']))
-
+        status = Status()._format(prefix='[SKIP] ', message=message)
+        return vars(status._finalize(test_mode=__opts__['test']))
     return _state_action('qvm.create', name, *varargs, **kwargs)
 
 
@@ -211,8 +224,8 @@ def absent(name, *varargs, **kwargs):
     missing_status = Status(**_state_action('qvm.check', name, *['missing']))
     if missing_status.passed():
         message = "The VM with the name '{0}' is already missing.".format(name)
-        absent_status = Status()._format(prefix='[SKIP] ', message=message)
-        return dict(absent_status._finalize(test_mode=__opts__['test']))
+        status = Status()._format(prefix='[SKIP] ', message=message)
+        return vars(status._finalize(test_mode=__opts__['test']))
     return _state_action('qvm.remove', name, *varargs, **kwargs)
 
 
@@ -220,6 +233,12 @@ def clone(name, source, *varargs, **kwargs):
     '''
     Clone a VM (qvm-clone).
     '''
+    # Return if VM already exists
+    exists_status = Status(**_state_action('qvm.check', name, *['exists']))
+    if exists_status.passed():
+        message = "A VM with the name '{0}' already exists.".format(name)
+        status = Status()._format(prefix='[SKIP] ', message=message)
+        return vars(status._finalize(test_mode=__opts__['test']))
     return _state_action('qvm.clone', source, name, *varargs, **kwargs)
 
 
