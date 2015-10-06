@@ -19,11 +19,12 @@
 
 case "${1}" in
     configure)
-        # TODO:
-        # - Add formula path to file_roots
-        # - Add formula to salt top.sls
-        # - Add formula to pillar top.sls if contains pillar data
-        salt-call --local saltutil.sync_all -l quiet --out quiet > /dev/null || true
+        # Update Salt Configuration
+        qubesctl state.sls qubes.config -l quiet --out quiet > /dev/null || true
+        qubesctl saltutil.sync_all -l quiet --out quiet > /dev/null || true
+
+        # Enable Test States
+        #qubesctl topd.enable qvm.tests saltenv=test -l quiet --out quiet > /dev/null || true
         ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
