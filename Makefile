@@ -16,68 +16,101 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-PACKAGE_NAME := qubes-mgmt-salt-dom0-qvm
-PACKAGE_CONTENTS := README.rst LICENSE _modules _states qvm
-FORMULA_DIR ?= /srv/formulas/dom0
-FORMULA_NAME := $(shell cat formula_name)
+PACKAGE_NAME     := qubes-mgmt-salt-dom0-qvm
+FORMULA_NAME     := $(shell grep 'name' FORMULA|head -n 1|cut -f 2 -d :|xargs)
+STATE_NAME       := $(shell grep 'top_level_dir' FORMULA|head -n 1|cut -f 2 -d :|xargs)
+SALTENV          := $(shell grep 'saltenv' FORMULA|head -n 1|cut -f 2 -d :|xargs)
 
-RPMS_DIR := rpm/
+ifeq ($(STATE_NAME),)
+  STATE_NAME := $(FORMULA_NAME)
+endif
+ifeq ($(SALTENV),)
+  SALTENV := base
+endif
+
+FORMULA          ?= README.rst LICENSE _modules _states
+PILLAR           ?= 
+TEST_FORMULA     ?= tests
+TEST_PILLAR      ?= 
+
+TESTENV          ?= test
+TEST_DIR         ?= tests
+SALT_STATE_DIR   ?= srv/salt
+SALT_PILLAR_DIR  ?= srv/pillar
+SALT_FORMULA_DIR ?= srv/formulas
+
+DESTDIR		 := $(shell readlink -m $(DESTDIR))
+FORMULA_DIR       = $(SALT_FORMULA_DIR)/$(SALTENV)/$(FORMULA_NAME)
+PILLAR_DIR        = $(SALT_PILLAR_DIR)/$(SALTENV)
+
+VERBOSE ?= 0
 VERSION := $(shell cat version)
 RELEASE := $(shell cat rel)
 
 all:
 	@true
 
-help:
-	@echo "Qubes addons main Makefile:" ;\
-	    echo "make rpms                 <--- make all rpms and sign them";\
-	    echo; \
-	    echo "make clean                <--- clean all the binary files";\
-	    echo "make update-repo-current  <-- copy newly generated rpms to qubes yum repo";\
-	    echo "make update-repo-current-testing <-- same, but for -current-testing repo";\
-	    echo "make update-repo-unstable <-- same, but to -testing repo";\
-	    @exit 0;
+debug = \
+	if [ $(VERBOSE) -gt 0 ]; then \
+	    echo $(1); \
+	fi
 
-rpms:
-	rpmbuild --define "_rpmdir rpm/" -bb rpm_spec/$(PACKAGE_NAME).spec
-	rpm --addsign rpm/x86_64/$(PACKAGE_NAME)-$(VERSION)-$(RELEASE)*.rpm
+install-files = \
+	$(eval basepaths = $(1)) \
+	$(eval targetdir = $(2)) \
+	$(eval relpaths = $(3)) \
+	$(call debug, "============================================================"); \
+	$(call debug, "DESTDIR:   $(DESTDIR)"); \
+	$(call debug, "basepaths: $(basepaths)"); \
+	$(call debug, "targetdir: $(targetdir)"); \
+	$(call debug, "relpaths:  $(relpaths)"); \
+	$(if $(basepaths), \
+	    $(shell install -d -m 0750 $(DESTDIR)/$(targetdir)) \
+	    $(foreach basepath, $(basepaths), \
+	        $(eval files = $(shell find $(basepath))) \
+	        $(foreach file, $(files), \
+	            $(eval filtered = $(filter $(basepath), $(relpaths))) \
+	            $(call debug, "------------------------------------------------------------"); \
+	            $(call debug, "  filter-out: |$(filtered)|"); \
+	            $(call debug, "    basepath: |$(basepath)|"); \
+	            $(if $(filtered), \
+	                 $(eval relbase := $(shell realpath --relative-base $(basepath) $(file))), \
+	                 $(eval relbase := $(file)) \
+		    ) \
+	            $(call debug, "        file: |$(file)|"); \
+	            $(call debug, "     relbase: |$(relbase)|"); \
+	            $(if $(wildcard $(file)/.), \
+	                $(call debug, " install DIR: $(targetdir)/$(relbase)"); \
+	                $(call debug, ); \
+	                $(shell install -d -m 0750 $(DESTDIR)/$(targetdir)/$(relbase)) \
+	            , \
+	                $(call debug, "install FILE: $(file)"); \
+ 	                $(call debug, "          TO: $(targetdir)/$(relbase)"); \
+	                $(call debug, ); \
+	                $(shell install -p -m 0640 $(file) $(DESTDIR)/$(targetdir)/$(relbase)) \
+	            ) \
+	        ) \
+	    ) \
+	)
 
-rpms-dom0: rpms
-	@true
+.PHONY: install
+install: 
+	# Formula
+	@$(if $(FORMULA), $(call install-files, $(FORMULA), $(FORMULA_DIR)))
+	
+	# Pillar
+	@$(if $(PILLAR), $(call install-files, $(PILLAR), $(PILLAR_DIR), $(PILLAR)))
 
-rpms-vm: rpms
-	@true
+	# Formula Tests
+	@$(eval SALTENV = $(TESTENV))
+	
+	# Test Formula Contents (minus state directory)
+	@$(if $(filter-out $(TEST_DIR), $(TEST_FORMULA)), \
+	      $(call install-files, $(filter-out $(TEST_DIR), $(TEST_FORMULA)), $(FORMULA_DIR)))
 
-update-repo-current:
-	for vmrepo in ../yum/current-release/current/vm/* ; do \
-		dist=$$(basename $$vmrepo) ;\
-		ln -f $(RPMS_DIR)/x86_64/$(PACKAGE_NAME)-$(VERSION)-$(RELEASE).$$dist*.rpm $$vmrepo/rpm/ ;\
-	done
-
-update-repo-current-testing:
-	for vmrepo in ../yum/current-release/current-testing/vm/* ; do \
-		dist=$$(basename $$vmrepo) ;\
-		ln -f $(RPMS_DIR)/x86_64/$(PACKAGE_NAME)-$(VERSION)-$(RELEASE).$$dist*.rpm $$vmrepo/rpm/ ;\
-	done
-
-update-repo-unstable:
-	for vmrepo in ../yum/current-release/unstable/vm/* ; do \
-		dist=$$(basename $$vmrepo) ;\
-		ln -f $(RPMS_DIR)/x86_64/$(PACKAGE_NAME)-$(VERSION)-$(RELEASE).$$dist*.rpm $$vmrepo/rpm/ ;\
-	done
-
-update-repo-template:
-	for vmrepo in ../template-builder/yum_repo_qubes/* ; do \
-		dist=$$(basename $$vmrepo) ;\
-		ln -f $(RPMS_DIR)/x86_64/$(PACKAGE_NAME)-$(VERSION)-$(RELEASE).$$dist*.rpm $$vmrepo/rpm/ ;\
-	done
-
-install:
-	install -d -m 0750 $(DESTDIR)/$(FORMULA_DIR)/$(FORMULA_NAME)
-	@for file in $$(find $(PACKAGE_CONTENTS)); do \
-	    if [ -d "$${file}" ]; then \
-	        install -d -m 0750 "$(DESTDIR)/$(FORMULA_DIR)/$(FORMULA_NAME)/$${file}" ;\
-	    else \
-	        install -p -m 0640 "$${file}" "$(DESTDIR)/$(FORMULA_DIR)/$(FORMULA_NAME)/$${file}" ;\
-	    fi \
-	done
+	# Test Formula State Directory (rename 'tests' directory to $(STATE_NAME) using relbase
+	@$(if $(filter $(TEST_DIR), $(TEST_FORMULA)), \
+	      $(call install-files, $(filter $(TEST_DIR), $(TEST_FORMULA)), $(FORMULA_DIR)/$(STATE_NAME), $(TEST_DIR)))
+	
+	# Test Pillar
+	@$(if $(TEST_PILLAR), $(call install-files, $(TEST_PILLAR), $(PILLAR_DIR), $(TEST_PILLAR)))
