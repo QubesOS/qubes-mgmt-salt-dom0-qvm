@@ -1,17 +1,21 @@
 #!yamlscript
-#
+# -*- coding: utf-8 -*-
 # vim: set syntax=yaml ts=2 sw=2 sts=2 et :
 
 ##
+# qvm.tests
+# =========
+# 
 # Qubes qvm-* state, and module tests
 #
-# qubesctl state.sls qvm.tests
-#
 # Debug Environment:
-#   --local state.highstate
-#   --local state.highstate -l debug
-#   --local state.highstate test=true
-#   --local state.single test=true qvm.absent salt-testvm just-db
+#   qubesctl state.highstate
+#   qubesctl state.highstate -l debug
+#   qubesctl state.highstate test=true
+#   qubesctl state.single test=true qvm.absent salt-testvm just-db
+#
+# Execute:
+#   qubesctl state.sls qvm.tests
 ##
 
 
