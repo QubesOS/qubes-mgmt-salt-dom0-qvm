@@ -1,0 +1,23 @@
+# vim: set syntax=yaml ts=2 sw=2 sts=2 et :
+
+package-name:       qubes-mgmt-salt-dom0-qvm
+name:               qvm-formula
+top_level_dir:      qvm
+formula-files:      README.rst LICENSE _modules _states
+pillar-files:       
+test-formula-files: README.rst LICENSE tests
+test-pillar-files: 
+formula_root:       /srv/salt
+saltenv:            base
+version:            3.0.0
+release:            1
+os:                 Qubes
+os_family:          RedHat
+summary:            Salt formula to interface to many of the Qubes dom0 qvm-* tools via a state file or module
+description: |
+  Salt formula to interface to many of the Qubes dom0 qvm-* tools via a state file or module
+
+state-tops:
+  test:
+    disable:
+      - qvm.tests

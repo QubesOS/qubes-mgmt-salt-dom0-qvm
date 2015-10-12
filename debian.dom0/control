@@ -2,12 +2,16 @@ Source: qubes-mgmt-salt-dom0-qvm
 Section: admin
 Priority: extra
 Maintainer: Jason Mehring <nrgaway@gmail.com>
-Build-Depends: debhelper (>= 9~), quilt
+Build-Depends:
+    debhelper (>= 9~),
+    quilt
 Standards-Version: 3.9.5
 Homepage: http://www.qubes-os.org
 
 Package: qubes-mgmt-salt-dom0-qvm
 Section: admin
 Architecture: all
-Depends: qubes-mgmt-salt-base, qubes-mgmt-salt-dom0
+Depends:
+    qubes-mgmt-salt-base,
+    qubes-mgmt-salt-dom0
 Description: Salt formula to interface to many of the Qubes dom0 qvm-* tools via a state file or module.
