@@ -48,29 +48,28 @@ States and functions to implement (qvm-commands):
 [X] qvm-missing (qvm-check)
 '''
 
+# pylint: disable=W0212
+
 # Import python libs
+from __future__ import absolute_import
 import collections
 import logging
 
-# Salt libs
+# Import salt libs
+from salt.exceptions import (CommandExecutionError, SaltInvocationError)
 from salt.output import nested
 from salt.utils.odict import OrderedDict as _OrderedDict
-from salt.exceptions import (
-    CommandExecutionError, SaltInvocationError
-)
 
-# Salt + Qubes libs
-import qubes_utils
-
-from qubes_utils import Status
+# Import custom libs
+import qubes_utils  # pylint: disable=F0401
+from qubes_utils import Status  # pylint: disable=F0401
 
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
     '''
-    Only make these states available if a qvm provider has been detected or
-    assigned for this minion
+    Only make these states available if a qvm provider has been detected.
     '''
     # XXX: TEMP
     if not hasattr(qubes_utils, '__opts__'):
@@ -107,15 +106,17 @@ def _state_action(_action, *varargs, **kwargs):
     '''
     try:
         status = __salt__[_action](*varargs, **kwargs)
-    except (SaltInvocationError, CommandExecutionError), e:
-        status = Status(retcode=1, result=False, stderr=e.message + '\n')
+    except (SaltInvocationError, CommandExecutionError) as err:
+        status = Status(retcode=1, result=False, stderr=err.message + '\n')
     return vars(status)
 
 
 def exists(name, *varargs, **kwargs):
     '''
-    Verify the named VM is present or exists. This returns True only if the
-    named VM existst but does not create the VM if missing (qvm-exists).
+    Verify the named VM is present or exists.
+
+    Return True only if the named VM exists.  Will not create the VM if
+    missing (qvm-exists).
     '''
     varargs = list(varargs)
     varargs.append('exists')
@@ -124,8 +125,10 @@ def exists(name, *varargs, **kwargs):
 
 def missing(name, *varargs, **kwargs):
     '''
-    Verify the named VM is missing. This returns True only if the named VM is
-    missing but does not remove the VM if present (qvm-mising).
+    Verify the named VM is missing.
+
+    Return True only if the named VM is missing.  Will not remove the VM if
+    present (qvm-missing).
     '''
     varargs = list(varargs)
     varargs.append('missing')
@@ -134,7 +137,7 @@ def missing(name, *varargs, **kwargs):
 
 def running(name, *varargs, **kwargs):
     '''
-    Returns True is vmname is running (qvm-running).
+    Return True is vmname is running (qvm-running).
     '''
     varargs = list(varargs)
     varargs.append('running')
@@ -143,14 +146,16 @@ def running(name, *varargs, **kwargs):
 
 def halted(name, *varargs, **kwargs):
     '''
-    Returns True is vmname is halted (qvm-halted).
+    Return True is vmname is halted (qvm-halted).
     '''
     varargs = list(varargs)
     varargs.append('halted')
     # Return if VM already halted (stderr will contain message if VM absent)
-    halted_status = Status(**_state_action('qvm.state', name, *varargs, **kwargs))
+    halted_status = Status(**_state_action('qvm.state', name, *varargs,
+                                           **kwargs))
     if halted_status.passed() or halted_status.stderr:
-        message = halted_status.stderr or "'{0}' is already halted.".format(name)
+        message = halted_status.stderr or "'{0}' is already halted.".format(
+            name)
         status = Status()._format(prefix='[SKIP] ', message=message)
         return vars(status._finalize(test_mode=__opts__['test']))
     return _state_action('qvm.state', name, *varargs, **kwargs)
@@ -181,7 +186,8 @@ def kill(name, *varargs, **kwargs):
     # Return if VM already halted (stderr will contain message if VM absent)
     halted_status = Status(**_state_action('qvm.state', name, *['halted']))
     if halted_status.passed():
-        message = halted_status.stderr or "'{0}' is already halted.".format(name)
+        message = halted_status.stderr or "'{0}' is already halted.".format(
+            name)
         status = Status()._format(prefix='[SKIP] ', message=message)
         return vars(status._finalize(test_mode=__opts__['test']))
     return _state_action('qvm.kill', name, *varargs, **kwargs)
@@ -203,8 +209,9 @@ def unpause(name, *varargs, **kwargs):
 
 def present(name, *varargs, **kwargs):
     '''
-    Make sure the named VM is present. If it is missing, it will be created
-    (qvm-present).
+    Make sure the named VM is present.
+
+    VM will be created if missing (qvm-present).
     '''
     # Return if VM already exists
     exists_status = Status(**_state_action('qvm.check', name, *['exists']))
@@ -217,8 +224,9 @@ def present(name, *varargs, **kwargs):
 
 def absent(name, *varargs, **kwargs):
     '''
-    Make sure the named VM is absent. If it exists, it will be deleted.
-    (qvm-absent).
+    Make sure the named VM is absent.
+
+    VM will be deleted (removed) if present (qvm-absent).
     '''
     # Return if VM already absent
     missing_status = Status(**_state_action('qvm.check', name, *['missing']))
@@ -251,7 +259,7 @@ def run(name, *varargs, **kwargs):
 
 def prefs(name, *varargs, **kwargs):
     '''
-    Sets vmname preferences (qvm-prefs).
+    Set vmname preferences (qvm-prefs).
     '''
     return _state_action('qvm.prefs', name, *varargs, **kwargs)
 
@@ -263,6 +271,7 @@ def service(name, *varargs, **kwargs):
     return _state_action('qvm.service', name, *varargs, **kwargs)
 
 
+# pylint: disable=W0613,C0103
 def vm(name, *varargs, **kwargs):
     '''
     Wrapper to contain all VM state functions.
@@ -293,6 +302,9 @@ def vm(name, *varargs, **kwargs):
         run
     '''
     def get_action(action):
+        '''
+        Separate the action from action value.
+        '''
         action_value = 'fail'
         if isinstance(action, collections.Mapping):
             action, action_value = action.items()[0]
@@ -316,13 +328,10 @@ def vm(name, *varargs, **kwargs):
         'run',
     ]
 
-    ret = {'name': name,
-           'changes': {},
-           'result': True,
-           'comment': ''}
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 
     if __opts__['test']:
-        ret['result'] =  None
+        ret['result'] = None
 
     # Action ordering from state file
     actions = kwargs.pop('actions', actions)
@@ -337,9 +346,12 @@ def vm(name, *varargs, **kwargs):
         if action not in _actions:
             ret['result'] = False
             ret['comment'] = 'Unknown action keyword: {0}'.format(action)
-            return   ret
+            return ret
 
     def parse_options(options):
+        '''
+        Parse dictionary to create varargs + keyword args.
+        '''
         varargs = []
         keywords = _OrderedDict()
         for option in options:
@@ -349,7 +361,7 @@ def vm(name, *varargs, **kwargs):
                 varargs.append(option)
         return varargs, keywords
 
-    for index, action in enumerate(actions):
+    for action in actions:
         action, action_value = get_action(action)
 
         if action in kwargs:
@@ -361,7 +373,8 @@ def vm(name, *varargs, **kwargs):
                 status = globals()[action](name, *_varargs, **keywords)
             else:
                 linefeed = '\n\n' if ret['comment'] else ''
-                ret['comment'] += '{0}====== [\'{1}\'] ======\n'.format(linefeed, action)
+                ret['comment'] += '{0}====== [\'{1}\'] ======\n'.format(
+                    linefeed, action)
                 ret['comment'] += '[SKIP] Skipping due to previous failure!'
                 continue
 
@@ -373,7 +386,8 @@ def vm(name, *varargs, **kwargs):
                 ret['changes']['qvm.' + action] = status['changes']
 
             linefeed = '\n\n' if ret['comment'] else ''
-            ret['comment'] += '{0}====== [\'{1}\'] ======\n'.format(linefeed, action)
+            ret['comment'] += '{0}====== [\'{1}\'] ======\n'.format(linefeed,
+                                                                    action)
 
             if 'comment' in status and status['comment'].strip():
                 ret['comment'] += status['comment']
