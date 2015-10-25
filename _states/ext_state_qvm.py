@@ -66,6 +66,9 @@ from qubes_utils import Status  # pylint: disable=F0401
 
 log = logging.getLogger(__name__)
 
+# Define the module's virtual name
+__virtualname__ = 'qvm'
+
 
 def __virtual__():
     '''
@@ -77,7 +80,9 @@ def __virtual__():
     if not hasattr(qubes_utils, '__salt__'):
         qubes_utils.__salt__ = __salt__
 
-    return 'qvm.prefs' in __salt__
+    if 'qvm.prefs' in __salt__:
+        return __virtualname__
+    return False
 
 
 def _nested_output(obj):
