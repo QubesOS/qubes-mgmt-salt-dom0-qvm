@@ -4,4 +4,4 @@
 test:
   dom0:
     - match: nodegroup
-    - qvm.tests
+    - qvm
