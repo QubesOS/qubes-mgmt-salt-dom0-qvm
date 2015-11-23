@@ -1,9 +1,8 @@
 %{!?version: %define version %(cat version)}
-%{!?rel: %define rel %(cat rel)}
 
 Name:      qubes-mgmt-salt-dom0-qvm
 Version:   %{version}
-Release:   %{rel}%{?dist}
+Release:   1%{?dist}
 Summary:   Salt formula to interface to many of the Qubes dom0 qvm-* tools via a state file or module
 License:   GPL 2.0
 URL:	   http://www.qubes-os.org/
