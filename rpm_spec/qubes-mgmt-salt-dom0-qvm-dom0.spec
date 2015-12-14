@@ -36,7 +36,7 @@ qubesctl saltutil.clear_cache -l quiet --out quiet > /dev/null || true
 qubesctl saltutil.sync_all refresh=true -l quiet --out quiet > /dev/null || true
 
 # Enable Test States
-#qubesctl top.enable %{state_name} saltenv=test -l quiet --out quiet > /dev/null || true
+#qubesctl top.enable qvm saltenv=test -l quiet --out quiet > /dev/null || true
 
 %files
 %defattr(-,root,root)
