@@ -1,17 +1,14 @@
 # vim: set syntax=yaml ts=2 sw=2 sts=2 et :
 
 package-name:       qubes-mgmt-salt-dom0-qvm
+saltenv:            base
+version:            3.1.0
+release:            1
 name:               qvm-formula
 top_level_dir:      qvm
 formula-files:      _modules _states
-pillar-files:
 test-formula-files: README.rst LICENSE tests
-test-pillar-files:
-formula_dir:        /srv/salt
-pillar_dir:         /srv/pillar
-saltenv:            base
-version:            3.0.0
-release:            1
+formula_dir:        $(MGMT_DEFAULT_STATE_DIR)
 os:                 Qubes
 os_family:          RedHat
 summary:            Salt formula to interface to many of the Qubes dom0 qvm-* tools via a state file or module
