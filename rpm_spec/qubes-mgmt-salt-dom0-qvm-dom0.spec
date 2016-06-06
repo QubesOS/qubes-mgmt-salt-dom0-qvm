@@ -31,7 +31,6 @@ make install DESTDIR=%{buildroot} LIBDIR=%{_libdir} BINDIR=%{_bindir} SBINDIR=%{
 
 %post
 # Update Salt Configuration
-qubesctl state.sls config -l quiet --out quiet > /dev/null || true
 qubesctl saltutil.clear_cache -l quiet --out quiet > /dev/null || true
 qubesctl saltutil.sync_all refresh=true -l quiet --out quiet > /dev/null || true
 
