@@ -34,7 +34,8 @@ import module_utils  # pylint: disable=F0401
 from module_utils import ModuleBase as _ModuleBase  # pylint: disable=F0401
 from module_utils import Status  # pylint: disable=F0401
 from nulltype import Null
-from qubes.qubes import QubesVmCollection  # pylint: disable=F0401,E0611
+
+import qubes
 
 # Enable logging
 log = logging.getLogger(__name__)
@@ -82,14 +83,12 @@ def _vm():
         Get Qubes VM object from qvm.collection and set it here.
         '''
         if value:
-            qvm_collection = QubesVmCollection()
-            qvm_collection.lock_db_for_reading()
-            qvm_collection.load()
-            qvm_collection.unlock_db()
-            qvm = qvm_collection.get_vm_by_name(value)
-            if qvm and qvm.qid in qvm_collection:
-                self._vm = qvm  # pylint: disable=W0212
+            app = qubes.Qubes()
+            try:
+                self._vm = app.domains[value]
                 return
+            except KeyError:
+                pass
         self._vm = None  # pylint: disable=W0212
 
     return vm
