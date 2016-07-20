@@ -374,7 +374,6 @@ def create(vmname, *varargs, **kwargs):
         action='store_true',
         help='Create HVM template'
     )
-    qvm.parser.add_argument('--net', action='store_true', help='Create NetVM')
     qvm.parser.add_argument(
         '--standalone',
         action='store_true',
@@ -413,11 +412,6 @@ def create(vmname, *varargs, **kwargs):
         nargs=1,
         help=
         'Use provided root.img instead of default/empty one (file will be COPIED)'
-    )
-    qvm.parser.add_argument(
-        '--mem',
-        nargs=1,
-        help='Initial memory size (in MB)'
     )
     qvm.parser.add_argument('--vcpus', nargs=1, help='VCPUs count')
     qvm.parser.add_argument('vmname', help='Virtual machine name')
