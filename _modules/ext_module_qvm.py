@@ -36,6 +36,7 @@ from module_utils import Status  # pylint: disable=F0401
 from nulltype import Null
 
 import qubes
+import qubes.devices
 
 # Enable logging
 log = logging.getLogger(__name__)
@@ -638,7 +639,6 @@ def prefs(vmname, *varargs, **kwargs):
         - debug:                true|(false)
         - default-user:         <string>
         - dir:                  <string>
-        - dispvm-netvm:         <string>
         - include-in-backups:   true|false
         - installed-by-rpm:     true|false
         - internal:             true|(false)
@@ -754,12 +754,6 @@ def prefs(vmname, *varargs, **kwargs):
     properties.add_argument('--default-user', '--default_user', nargs=1)
     properties.add_argument('--dir', nargs=1)
     properties.add_argument(
-        '--dispvm-netvm',
-        '--dispvm_netvm',
-        nargs=1,
-        type=bool
-    )
-    properties.add_argument(
         '--label',
         nargs=1,
         choices=(
@@ -795,13 +789,8 @@ def prefs(vmname, *varargs, **kwargs):
         default=True
     )
     properties.add_argument('--pcidevs', nargs='*', default=[])
-    properties.add_argument('--private-img', '--private_img', nargs=1)
-    properties.add_argument('--root-img', '--root_img', nargs=1)
-    properties.add_argument(
-        '--root-volatile-img',
-        '--root_volatile_img',
-        nargs=1
-    )
+    properties.add_argument('--provides-network', nargs=1, type=bool,
+            default=False)
     properties.add_argument('--template', nargs=1)
     properties.add_argument('--type', nargs=1)
     properties.add_argument(
@@ -830,14 +819,6 @@ def prefs(vmname, *varargs, **kwargs):
     }
 
     # pylint: disable=W0613
-    def run_post(cmd, status, data):
-        '''
-        Called by run to allow additional post-processing of status.
-        '''
-        if status.passed():
-            status.changes.setdefault(data['key'], {})
-            status.changes[data['key']]['old'] = data['value_old']
-            status.changes[data['key']]['new'] = data['value_new']
 
     args = qvm.parse_args(vmname, *varargs, **kwargs)
     label_width = 19
@@ -855,6 +836,15 @@ def prefs(vmname, *varargs, **kwargs):
         else:
             selected_properties = all_properties
 
+    if 'action' in kwargs and kwargs['action'] == 'get' and varargs:
+        result = set(varargs).difference(set(selected_properties))
+        if result:
+            for r in result:
+                message = fmt.format(r, 'Invalid key!')
+                status = Status(retcode=1)
+                qvm.save_status(status, message=message)
+
+    changed = False
     for key in selected_properties:
 
         # Qubes keys are stored with underscrores ('_'), not hyphens ('-')
@@ -862,13 +852,6 @@ def prefs(vmname, *varargs, **kwargs):
 
         value_current = getattr(args.vm, property_map.get(dest, dest), Null)
         value_current = getattr(value_current, 'name', value_current)
-
-        # dest does not exist in vm database
-        if value_current == Null:
-            message = fmt.format(dest, 'Invalid key!')
-            status = Status(retcode=1)
-            qvm.save_status(status, message=message)
-            continue
 
         if args.action in ['list', 'get', 'gry']:
             qvm.save_status(prefix='', message=fmt.format(dest, value_current))
@@ -885,15 +868,28 @@ def prefs(vmname, *varargs, **kwargs):
         data = dict(key=dest, value_old=value_current, value_new=value_new)
         # pylint: disable=W0212
         if value_new is not None:
-            cmd = '/usr/bin/qvm-prefs {0} {1} {2} "{3}"'.format(
-                ' '.join(args._arg_info['_argparse_flags']), args.vmname, dest,
-                value_new
-            )
+            print "Setting %s to %s" % (dest, value_new)
+            if dest == 'pcidevs':
+                for dev_id in value_new:
+                    dev = qubes.devices.PCIDevice(dev_id.strip())   
+                    args.vm.devices['pci'].attach(dev)
+            else:
+                setattr(args.vm, dest, value_new)
+            status = qvm.save_status(retcode=0)
+            status.changes.setdefault(data['key'], {})
+            status.changes[data['key']]['old'] = data['value_old']
+            status.changes[data['key']]['new'] = data['value_new']
+            changed = True
         else:
-            cmd = '/usr/bin/qvm-prefs {0} --delete {1} {2}'.format(
-                ' '.join(args._arg_info['_argparse_flags']), args.vmname, dest)
+            delattr(args.vm, dest)
+            status = qvm.save_status(retcode=0)
+            status.changes.setdefault(data['key'], {})
+            status.changes[data['key']]['old'] = data['value_old']
+            status.changes[data['key']]['new'] = None
+            changed = True
 
-        status = qvm.run(cmd, data=data, post_hook=run_post)
+    if changed:
+        args.vm.app.save()
 
     # Returns the status 'data' dictionary
     return qvm.status()
