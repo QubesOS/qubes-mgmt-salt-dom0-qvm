@@ -890,10 +890,14 @@ def prefs(vmname, *varargs, **kwargs):
         # Execute command (will not execute in test mode)
         data = dict(key=dest, value_old=value_current, value_new=value_new)
         # pylint: disable=W0212
-        cmd = '/usr/bin/qvm-prefs {0} --set {1} {2} "{3}"'.format(
-            ' '.join(args._arg_info['_argparse_flags']), args.vmname, dest,
-            value_new
-        )
+        if value_new is not None:
+            cmd = '/usr/bin/qvm-prefs {0} {1} {2} "{3}"'.format(
+                ' '.join(args._arg_info['_argparse_flags']), args.vmname, dest,
+                value_new
+            )
+        else:
+            cmd = '/usr/bin/qvm-prefs {0} --delete {1} {2}'.format(
+                ' '.join(args._arg_info['_argparse_flags']), args.vmname, dest)
 
         status = qvm.run(cmd, data=data, post_hook=run_post)
 
