@@ -31,13 +31,30 @@ States and functions to implement (qvm-commands):
 [X] Implemented
 [1-9] Next to Implement
 
-[ ] qvm-add-appvm       [X] qvm-create              [ ] qvm-ls                       [X] qvm-shutdown
-[ ] qvm-add-template    [ ] qvm-create-default-dvm  [ ] qvm-pci                      [X] qvm-start
-[ ] qvm-backup          [ ] qvm-firewall            [X] qvm-prefs                    [ ] qvm-sync-appmenus
-[ ] qvm-backup-restore  [ ] qvm-grow-private        [X] qvm-remove                   [ ] qvm-sync-clock
-[ ] qvm-block           [ ] qvm-grow-root           [ ] qvm-revert-template-changes  [ ] qvm-template-commit
-[X] qvm-check           [ ] qvm-init-storage        [X] qvm-run                      [ ] qvm-trim-template
-[X] qvm-clone           [X] qvm-kill                [X] qvm-service                  [ ] qvm-usb
+[ ] qvm-add-appvm
+[ ] qvm-add-template
+[ ] qvm-backup
+[ ] qvm-backup-restore
+[ ] qvm-block
+[X] qvm-check
+[X] qvm-clone
+
+[X] qvm-create
+[ ] qvm-create-default-dvm
+[ ] qvm-firewall
+[ ] qvm-grow-private
+[ ] qvm-grow-root
+[ ] qvm-init-storage
+[X] qvm-kill
+
+
+[X] qvm-create
+[ ] qvm-create-default-dvm
+[ ] qvm-firewall
+[ ] qvm-grow-private
+[ ] qvm-grow-root
+[ ] qvm-init-storage
+[X] qvm-kill
 
 [X] qvm-pause
 [X] qvm-unpause
@@ -46,9 +63,16 @@ States and functions to implement (qvm-commands):
 [X] qvm-absent (qvm-remove)
 [X] qvm-exists (qvm-check)
 [X] qvm-missing (qvm-check)
-'''
 
-# pylint: disable=W0212
+[X] qvm-shutdown
+[X] qvm-start
+[] qvm-sync-appmenus
+[ ] qvm-sync-clock
+[ ] qvm-template-commit
+[ ] qvm-trim-template
+[ ] qvm-usb
+
+'''
 
 # Import python libs
 from __future__ import absolute_import
@@ -76,11 +100,11 @@ def __virtual__():
     '''
     # XXX: TEMP
     if not hasattr(qubes_utils, '__opts__'):
-        qubes_utils.__opts__ = __opts__
+        qubes_utils.__opts__ = __opts__  # NOQA
     if not hasattr(qubes_utils, '__salt__'):
-        qubes_utils.__salt__ = __salt__
+        qubes_utils.__salt__ = __salt__  # NOQA
 
-    if 'qvm.prefs' in __salt__:
+    if 'qvm.prefs' in __salt__:  # NOQA
         return __virtualname__
     return False
 
@@ -89,9 +113,8 @@ def _nested_output(obj):
     '''
     Serialize obj and format for output.
     '''
-    nested.__opts__ = __opts__
-    ret = nested.output(obj).rstrip()
-    return ret
+    nested.__opts__ = __opts__  # NOQA
+    return nested.output(obj).rstrip()
 
 
 def _state_action(_action, *varargs, **kwargs):
@@ -110,7 +133,7 @@ def _state_action(_action, *varargs, **kwargs):
             return _state_action('qvm.check', name, *varargs, **kwargs)
     '''
     try:
-        status = __salt__[_action](*varargs, **kwargs)
+        status = __salt__[_action](*varargs, **kwargs)  # NOQA
     except (SaltInvocationError, CommandExecutionError) as err:
         status = Status(retcode=1, result=False, stderr=err.message + '\n')
     return vars(status)
@@ -162,7 +185,7 @@ def halted(name, *varargs, **kwargs):
         message = halted_status.stderr or "'{0}' is already halted.".format(
             name)
         status = Status()._format(prefix='[SKIP] ', message=message)
-        return vars(status._finalize(test_mode=__opts__['test']))
+        return vars(status._finalize(test_mode=__opts__['test']))  # NOQA
     return _state_action('qvm.state', name, *varargs, **kwargs)
 
 
@@ -194,7 +217,7 @@ def kill(name, *varargs, **kwargs):
         message = halted_status.stderr or "'{0}' is already halted.".format(
             name)
         status = Status()._format(prefix='[SKIP] ', message=message)
-        return vars(status._finalize(test_mode=__opts__['test']))
+        return vars(status._finalize(test_mode=__opts__['test']))  # NOQA
     return _state_action('qvm.kill', name, *varargs, **kwargs)
 
 
@@ -223,7 +246,7 @@ def present(name, *varargs, **kwargs):
     if exists_status.passed():
         message = "A VM with the name '{0}' already exists.".format(name)
         status = Status()._format(prefix='[SKIP] ', message=message)
-        return vars(status._finalize(test_mode=__opts__['test']))
+        return vars(status._finalize(test_mode=__opts__['test']))  # NOQA
     return _state_action('qvm.create', name, *varargs, **kwargs)
 
 
@@ -238,7 +261,7 @@ def absent(name, *varargs, **kwargs):
     if missing_status.passed():
         message = "The VM with the name '{0}' is already missing.".format(name)
         status = Status()._format(prefix='[SKIP] ', message=message)
-        return vars(status._finalize(test_mode=__opts__['test']))
+        return vars(status._finalize(test_mode=__opts__['test']))  # NOQA
     return _state_action('qvm.remove', name, *varargs, **kwargs)
 
 
@@ -251,7 +274,7 @@ def clone(name, source, *varargs, **kwargs):
     if exists_status.passed():
         message = "A VM with the name '{0}' already exists.".format(name)
         status = Status()._format(prefix='[SKIP] ', message=message)
-        return vars(status._finalize(test_mode=__opts__['test']))
+        return vars(status._finalize(test_mode=__opts__['test']))  # NOQA
     return _state_action('qvm.clone', source, name, *varargs, **kwargs)
 
 
@@ -312,7 +335,7 @@ def vm(name, *varargs, **kwargs):
         '''
         action_value = 'fail'
         if isinstance(action, collections.Mapping):
-            action, action_value = action.items()[0]
+            action, action_value = list(action.items())[0]
         return action, action_value
 
     actions = [
@@ -335,7 +358,7 @@ def vm(name, *varargs, **kwargs):
 
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 
-    if __opts__['test']:
+    if __opts__['test']:  # NOQA
         ret['result'] = None
 
     # Action ordering from state file
@@ -347,7 +370,7 @@ def vm(name, *varargs, **kwargs):
         action, action_value = get_action(action)
         _actions.append(action)
 
-    for action in kwargs.keys():
+    for action in kwargs:
         if action not in _actions:
             ret['result'] = False
             ret['comment'] = 'Unknown action keyword: {0}'.format(action)
@@ -374,7 +397,7 @@ def vm(name, *varargs, **kwargs):
             _varargs, keywords = parse_options(kwargs[action])
 
             # Execute action
-            if ret['result'] or __opts__['test']:
+            if ret['result'] or __opts__['test']:  # NOQA
                 status = globals()[action](name, *_varargs, **keywords)
             else:
                 linefeed = '\n\n' if ret['comment'] else ''
