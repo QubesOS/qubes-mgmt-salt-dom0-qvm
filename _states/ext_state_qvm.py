@@ -66,7 +66,7 @@ States and functions to implement (qvm-commands):
 
 [X] qvm-shutdown
 [X] qvm-start
-[] qvm-sync-appmenus
+[ ] qvm-sync-appmenus
 [ ] qvm-sync-clock
 [ ] qvm-template-commit
 [ ] qvm-trim-template
