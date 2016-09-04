@@ -866,7 +866,7 @@ def prefs(vmname, *varargs, **kwargs):
         data = dict(key=dest, value_old=value_current, value_new=value_new)
         # pylint: disable=W0212
         if value_new is not None:
-            print "Setting %s to %s" % (dest, value_new)
+            log.info("Setting %s to %s", dest, value_new)
             if dest == 'pcidevs':
                 for dev_id in value_new:
                     dev = qubes.devices.PCIDevice(dev_id.strip())   
