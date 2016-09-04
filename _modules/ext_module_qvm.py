@@ -87,10 +87,8 @@ def _vm():
             app = qubes.Qubes()
             try:
                 self._vm = app.domains[value]
-                return
             except KeyError:
-                pass
-        self._vm = None  # pylint: disable=W0212
+                self._vm = None  # pylint: disable=W0212
 
     return vm
 
