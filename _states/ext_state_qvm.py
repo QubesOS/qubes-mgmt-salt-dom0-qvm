@@ -72,7 +72,7 @@ States and functions to implement (qvm-commands):
 [ ] qvm-trim-template
 [ ] qvm-usb
 
-'''
+''' # pylint:disable=protected-access
 
 # Import python libs
 from __future__ import absolute_import
@@ -88,15 +88,15 @@ from salt.utils.odict import OrderedDict as _OrderedDict
 import qubes_utils  # pylint: disable=F0401
 from qubes_utils import Status  # pylint: disable=F0401
 
-log = logging.getLogger(__name__)
+log = logging.getLogger(__name__) # pylint:disable=invalid-name
 
 # Define the module's virtual name
 __virtualname__ = 'qvm'
 
-try: __opts__
-except NameError: __opts__ = {}
-try: __salt__
-except NameError: __salt__ = {}
+try: __opts__                   # pylint: disable=multiple-statements
+except NameError: __opts__ = {} # pylint: disable=multiple-statements
+try: __salt__                   # pylint: disable=multiple-statements
+except NameError: __salt__ = {} # pylint: disable=multiple-statements
 
 
 def __virtual__():
@@ -104,11 +104,11 @@ def __virtual__():
     Only make these states available if a qvm provider has been detected.
     '''
     if not hasattr(qubes_utils, '__opts__'):
-        qubes_utils.__opts__ = __opts__  # NOQA
+        qubes_utils.__opts__ = __opts__
     if not hasattr(qubes_utils, '__salt__'):
-        qubes_utils.__salt__ = __salt__  # NOQA
+        qubes_utils.__salt__ = __salt__
 
-    if 'qvm.prefs' in __salt__:  # NOQA
+    if 'qvm.prefs' in __salt__:
         return __virtualname__
     return False
 
@@ -117,7 +117,7 @@ def _nested_output(obj):
     '''
     Serialize obj and format for output.
     '''
-    nested.__opts__ = __opts__  # NOQA
+    nested.__opts__ = __opts__
     return nested.output(obj).rstrip()
 
 
@@ -137,7 +137,7 @@ def _state_action(_action, *varargs, **kwargs):
             return _state_action('qvm.check', name, *varargs, **kwargs)
     '''
     try:
-        status = __salt__[_action](*varargs, **kwargs)  # NOQA
+        status = __salt__[_action](*varargs, **kwargs)
     except (SaltInvocationError, CommandExecutionError) as err:
         status = Status(retcode=1, result=False, stderr=err.message + '\n')
     return vars(status)
@@ -189,7 +189,7 @@ def halted(name, *varargs, **kwargs):
         message = halted_status.stderr or "'{0}' is already halted.".format(
             name)
         status = Status()._format(prefix='[SKIP] ', message=message)
-        return vars(status._finalize(test_mode=__opts__['test']))  # NOQA
+        return vars(status._finalize(test_mode=__opts__['test']))
     return _state_action('qvm.state', name, *varargs, **kwargs)
 
 
@@ -221,7 +221,7 @@ def kill(name, *varargs, **kwargs):
         message = halted_status.stderr or "'{0}' is already halted.".format(
             name)
         status = Status()._format(prefix='[SKIP] ', message=message)
-        return vars(status._finalize(test_mode=__opts__['test']))  # NOQA
+        return vars(status._finalize(test_mode=__opts__['test']))
     return _state_action('qvm.kill', name, *varargs, **kwargs)
 
 
@@ -250,7 +250,7 @@ def present(name, *varargs, **kwargs):
     if exists_status.passed():
         message = "A VM with the name '{0}' already exists.".format(name)
         status = Status()._format(prefix='[SKIP] ', message=message)
-        return vars(status._finalize(test_mode=__opts__['test']))  # NOQA
+        return vars(status._finalize(test_mode=__opts__['test']))
     return _state_action('qvm.create', name, *varargs, **kwargs)
 
 
@@ -265,7 +265,7 @@ def absent(name, *varargs, **kwargs):
     if missing_status.passed():
         message = "The VM with the name '{0}' is already missing.".format(name)
         status = Status()._format(prefix='[SKIP] ', message=message)
-        return vars(status._finalize(test_mode=__opts__['test']))  # NOQA
+        return vars(status._finalize(test_mode=__opts__['test']))
     return _state_action('qvm.remove', name, *varargs, **kwargs)
 
 
@@ -278,7 +278,7 @@ def clone(name, source, *varargs, **kwargs):
     if exists_status.passed():
         message = "A VM with the name '{0}' already exists.".format(name)
         status = Status()._format(prefix='[SKIP] ', message=message)
-        return vars(status._finalize(test_mode=__opts__['test']))  # NOQA
+        return vars(status._finalize(test_mode=__opts__['test']))
     return _state_action('qvm.clone', source, name, *varargs, **kwargs)
 
 
@@ -362,7 +362,7 @@ def vm(name, *varargs, **kwargs):
 
     ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
 
-    if __opts__['test']:  # NOQA
+    if __opts__['test']:
         ret['result'] = None
 
     # Action ordering from state file
@@ -401,7 +401,7 @@ def vm(name, *varargs, **kwargs):
             _varargs, keywords = parse_options(kwargs[action])
 
             # Execute action
-            if ret['result'] or __opts__['test']:  # NOQA
+            if ret['result'] or __opts__['test']:
                 status = globals()[action](name, *_varargs, **keywords)
             else:
                 linefeed = '\n\n' if ret['comment'] else ''
