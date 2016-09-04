@@ -93,12 +93,16 @@ log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'qvm'
 
+try: __opts__
+except NameError: __opts__ = {}
+try: __salt__
+except NameError: __salt__ = {}
+
 
 def __virtual__():
     '''
     Only make these states available if a qvm provider has been detected.
     '''
-    # XXX: TEMP
     if not hasattr(qubes_utils, '__opts__'):
         qubes_utils.__opts__ = __opts__  # NOQA
     if not hasattr(qubes_utils, '__salt__'):
