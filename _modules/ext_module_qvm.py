@@ -1035,7 +1035,8 @@ def service(vmname, *varargs, **kwargs):
     action_map = dict(enable=True, disable=False, default=None)
 
     args = qvm.parse_args(vmname, *varargs, **kwargs)
-    current_services = args.vm.services
+    current_services = dict([(k[len('service/'):], v) for k, v
+            in args.vm.features.items() if k.startswith('service/')])
 
     # Return all current services if a 'list' only was selected
     if args.list is not None or not (
@@ -1058,6 +1059,7 @@ def service(vmname, *varargs, **kwargs):
             else:
                 action.remove(value)
 
+    changed = False
     for action in ['enable', 'disable', 'default']:
         service_names = getattr(args, action, [])
         for service_name in service_names:
@@ -1079,16 +1081,16 @@ def service(vmname, *varargs, **kwargs):
                 value_new=label(value_new)
             )
 
-            cmd = '/usr/bin/qvm-service {0} --{1} {2}'.format(
-                args.vmname, action, service_name
-            )
+            if not __opts__['test']:
+                args.vm.features['service/' + service_name] = value_new
+                changed = True
+            status = qvm.save_status(retcode=0)
+            status.changes.setdefault(service_name, {})
+            status.changes[service_name]['old'] = current_services.get(service_name, Null)
+            status.changes[service_name]['new'] = value_new
 
-            # pylint: disable=W0612
-            status = qvm.run(
-                cmd,
-                data=data,
-                post_hook=run_post
-            )
+    if changed:
+        args.vm.app.save()
 
     # Returns the status 'data' dictionary
     return qvm.status()
