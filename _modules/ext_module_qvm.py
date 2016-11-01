@@ -848,8 +848,12 @@ def prefs(vmname, *varargs, **kwargs):
         # Qubes keys are stored with underscrores ('_'), not hyphens ('-')
         dest = key.replace('-', '_')
 
-        value_current = getattr(args.vm, property_map.get(dest, dest), Null)
-        value_current = getattr(value_current, 'name', value_current)
+        if dest == 'pcidevs':
+            value_current = [str(dev.ident) for dev
+                in args.vm.devices['pci'].attached()]
+        else:
+            value_current = getattr(args.vm, property_map.get(dest, dest), Null)
+            value_current = getattr(value_current, 'name', value_current)
 
         if args.action in ['list', 'get', 'gry']:
             qvm.save_status(prefix='', message=fmt.format(dest, value_current))
@@ -865,26 +869,37 @@ def prefs(vmname, *varargs, **kwargs):
         # Execute command (will not execute in test mode)
         data = dict(key=dest, value_old=value_current, value_new=value_new)
         # pylint: disable=W0212
-        if value_new is not None:
-            log.info("Setting %s to %s", dest, value_new)
-            if dest == 'pcidevs':
-                for dev_id in value_new:
-                    dev = qubes.devices.PCIDevice(dev_id.strip())   
+        if dest == 'pcidevs':
+            value_combined = value_current
+            for dev_id in value_new:
+                dev = args.vm.app.domains['dom0'].\
+                      devices['pci'][dev_id.strip()]
+                try:
                     args.vm.devices['pci'].attach(dev)
-            else:
-                setattr(args.vm, dest, value_new)
+                except qubes.devices.DeviceAlreadyAttached:
+                    continue
+                value_combined.append(dev_id)
+                changed = True
             status = qvm.save_status(retcode=0)
             status.changes.setdefault(data['key'], {})
             status.changes[data['key']]['old'] = data['value_old']
-            status.changes[data['key']]['new'] = data['value_new']
-            changed = True
+            status.changes[data['key']]['new'] = value_combined
         else:
-            delattr(args.vm, dest)
-            status = qvm.save_status(retcode=0)
-            status.changes.setdefault(data['key'], {})
-            status.changes[data['key']]['old'] = data['value_old']
-            status.changes[data['key']]['new'] = None
-            changed = True
+            if value_new is not None:
+                log.info("Setting %s to %s", dest, value_new)
+                setattr(args.vm, dest, value_new)
+                status = qvm.save_status(retcode=0)
+                status.changes.setdefault(data['key'], {})
+                status.changes[data['key']]['old'] = data['value_old']
+                status.changes[data['key']]['new'] = data['value_new']
+                changed = True
+            else:
+                delattr(args.vm, dest)
+                status = qvm.save_status(retcode=0)
+                status.changes.setdefault(data['key'], {})
+                status.changes[data['key']]['old'] = data['value_old']
+                status.changes[data['key']]['new'] = None
+                changed = True
 
     if changed:
         args.vm.app.save()
