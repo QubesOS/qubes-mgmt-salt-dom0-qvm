@@ -870,7 +870,7 @@ def prefs(vmname, *varargs, **kwargs):
         data = dict(key=dest, value_old=value_current, value_new=value_new)
         # pylint: disable=W0212
         if dest == 'pcidevs':
-            value_combined = value_current
+            value_combined = value_current.copy()
             for dev_id in value_new:
                 dev = args.vm.app.domains['dom0'].\
                       devices['pci'][dev_id.strip()]
