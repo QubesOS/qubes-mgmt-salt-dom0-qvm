@@ -883,7 +883,10 @@ def prefs(vmname, *varargs, **kwargs):
 
         # Value matches; no need to update
         value_new = kwargs[key]
-        if value_current == value_new:
+        vals_are_none = value_new == 'none' and value_current is None
+        noneable_keys = ['netvm', 'dispvm_netvm', 'kernel', 'drive']
+        equiv_none = vals_are_none and key in noneable_keys
+        if value_current == value_new or equiv_none:
             message = fmt.format(dest, value_current)
             qvm.save_status(prefix='[SKIP] ', message=message)
             continue
