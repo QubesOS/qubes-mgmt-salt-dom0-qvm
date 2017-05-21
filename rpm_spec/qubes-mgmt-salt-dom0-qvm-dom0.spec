@@ -11,6 +11,7 @@ Group:     System administration tools
 BuildArch: noarch
 Requires:  qubes-mgmt-salt
 Requires:  qubes-mgmt-salt-dom0
+Requires:  python2-qubesadmin
 
 %define _builddir %(pwd)
 

@@ -35,8 +35,8 @@ from module_utils import ModuleBase as _ModuleBase  # pylint: disable=F0401
 from module_utils import Status  # pylint: disable=F0401
 from nulltype import Null
 
-import qubes
-import qubes.devices
+import qubesadmin
+import qubesadmin.devices
 
 # Enable logging
 log = logging.getLogger(__name__)
@@ -46,19 +46,7 @@ __virtualname__ = 'qvm'
 
 
 def __virtual__():
-    '''
-    Confine this module to Qubes dom0 based systems.
-    '''
-    try:
-        virtual_grain = __grains__['virtual'].lower()
-        virtual_subtype = __grains__['virtual_subtype'].lower()
-    except KeyError:
-        return False
-
-    enabled = ('xen dom0')
-    if virtual_grain == 'qubes' or virtual_subtype in enabled:
-        return __virtualname__
-    return False
+    return __virtualname__
 
 
 def _vm():
@@ -84,7 +72,7 @@ def _vm():
         Get Qubes VM object from qvm.collection and set it here.
         '''
         if value:
-            app = qubes.Qubes()
+            app = qubesadmin.Qubes()
             try:
                 self._vm = app.domains[value]
             except KeyError:
@@ -633,10 +621,8 @@ def prefs(vmname, *varargs, **kwargs):
 
         # Exclusive Positional
         - autostart:            true|(false)
-        - config:               <string>
         - debug:                true|(false)
         - default-user:         <string>
-        - dir:                  <string>
         - include-in-backups:   true|false
         - installed-by-rpm:     true|false
         - internal:             true|(false)
@@ -650,18 +636,10 @@ def prefs(vmname, *varargs, **kwargs):
         - netvm:                <string>
         - pci-strictreset:      true|false
         - pcidevs:              [string,]
-        - private-img:          <string>
-        - root-img:             <string>
-        - root-volatile-img:    <string>
         - template:             <string>
         - type:                 <string>
         - qrexec-timeout:       <int> (60)
-        - updateable:           true|false
         - vcpus:                <int>
-
-        # Optional Flags
-        - flags:
-          - force-root
 
     Example:
 
@@ -728,11 +706,6 @@ def prefs(vmname, *varargs, **kwargs):
     qvm = _QVMBase('qvm.create', **kwargs)
     qvm.argparser.options['hide'] = ['action']
     qvm.parser.add_argument(
-        '--force-root',
-        action='store_true',
-        help='Force to run, even with root privileges'
-    )
-    qvm.parser.add_argument(
         'vmname',
         action=_VMAction,
         help='Virtual machine name'
@@ -747,10 +720,8 @@ def prefs(vmname, *varargs, **kwargs):
     qvm.argparser.add_argument_group('properties')
     properties = qvm.argparser.get_argument_group('properties')
     properties.add_argument('--autostart', nargs=1, type=bool, default=False)
-    properties.add_argument('--config', nargs=1)
     properties.add_argument('--debug', nargs=1, type=bool, default=False)
     properties.add_argument('--default-user', '--default_user', nargs=1)
-    properties.add_argument('--dir', nargs=1)
     properties.add_argument(
         '--label',
         nargs=1,
@@ -811,9 +782,6 @@ def prefs(vmname, *varargs, **kwargs):
     # Maps property keys to vm attributes
     property_map = {
         'last_backup': 'backup_timestamp',
-        'dir': 'dir_path',
-        'config': 'conf_file',
-        'root_volatile_img': 'volatile_img',
     }
 
     # pylint: disable=W0613
@@ -876,7 +844,7 @@ def prefs(vmname, *varargs, **kwargs):
                       devices['pci'][dev_id.strip()]
                 try:
                     args.vm.devices['pci'].attach(dev)
-                except qubes.devices.DeviceAlreadyAttached:
+                except qubesadmin.exc.DeviceAlreadyAttached:
                     continue
                 value_combined.append(dev_id)
                 changed = True
@@ -900,9 +868,6 @@ def prefs(vmname, *varargs, **kwargs):
                 status.changes[data['key']]['old'] = data['value_old']
                 status.changes[data['key']]['new'] = None
                 changed = True
-
-    if changed:
-        args.vm.app.save()
 
     # Returns the status 'data' dictionary
     return qvm.status()
@@ -1023,16 +988,16 @@ def service(vmname, *varargs, **kwargs):
         '''
         Return a mapped service label.
         '''
-        if value is True:
+        if value == '1':
             return 'Enabled'
-        elif value is False:
+        elif value == '':
             return 'Disabled'
         elif value is None:
             return 'Missing'
         return value
 
     # action value map
-    action_map = dict(enable=True, disable=False, default=None)
+    action_map = dict(enable='1', disable='', default=None)
 
     args = qvm.parse_args(vmname, *varargs, **kwargs)
     current_services = dict([(k[len('service/'):], v) for k, v
@@ -1082,15 +1047,15 @@ def service(vmname, *varargs, **kwargs):
             )
 
             if not __opts__['test']:
-                args.vm.features['service/' + service_name] = value_new
+                if value_new is None:
+                    del args.vm.features['service/' + service_name]
+                else:
+                    args.vm.features['service/' + service_name] = value_new
                 changed = True
             status = qvm.save_status(retcode=0)
             status.changes.setdefault(service_name, {})
-            status.changes[service_name]['old'] = current_services.get(service_name, Null)
-            status.changes[service_name]['new'] = value_new
-
-    if changed:
-        args.vm.app.save()
+            status.changes[service_name]['old'] = label(current_services.get(service_name, None))
+            status.changes[service_name]['new'] = label(value_new)
 
     # Returns the status 'data' dictionary
     return qvm.status()

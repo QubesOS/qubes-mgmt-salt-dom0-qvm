@@ -12,6 +12,7 @@ Package: qubes-mgmt-salt-dom0-qvm
 Section: admin
 Architecture: all
 Depends:
+    python-qubesadmin,
     qubes-mgmt-salt-base,
     qubes-mgmt-salt-dom0
 Description: Salt formula to interface to many of the Qubes dom0 qvm-* tools via a state file or module.
