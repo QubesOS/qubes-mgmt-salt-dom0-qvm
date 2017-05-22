@@ -634,6 +634,8 @@ def prefs(vmname, *varargs, **kwargs):
         - maxmem:               <int>
         - memory:               <int>
         - netvm:                <string>
+          # pci-strictreset applies only to devices in pcidevs here, for full
+          # control use qvm.device (TBD)
         - pci-strictreset:      true|false
         - pcidevs:              [string,]
         - template:             <string>
@@ -810,6 +812,9 @@ def prefs(vmname, *varargs, **kwargs):
                 status = Status(retcode=1)
                 qvm.save_status(status, message=message)
 
+    # compatibility with Qubes 3.x
+    pci_strictreset = kwargs.get('pci_strictreset', True)
+
     changed = False
     for key in selected_properties:
 
@@ -817,8 +822,11 @@ def prefs(vmname, *varargs, **kwargs):
         dest = key.replace('-', '_')
 
         if dest == 'pcidevs':
-            value_current = [str(dev.ident) for dev
+            value_current = [str(dev.ident).replace('_', ':') for dev
                 in args.vm.devices['pci'].attached()]
+        elif dest == 'pci_strictreset':
+            value_current = all(not assignment.options.get('no-strict-reset', False)
+                    for assignment in args.vm.devices['pci'].assignments(True))
         else:
             value_current = getattr(args.vm, property_map.get(dest, dest), Null)
             value_current = getattr(value_current, 'name', value_current)
@@ -834,16 +842,36 @@ def prefs(vmname, *varargs, **kwargs):
             qvm.save_status(prefix='[SKIP] ', message=message)
             continue
 
+        if dest == 'pci_strictreset':
+            # "setting" pci_strictreset handled in 'pcidevs' property
+            continue
+
         # Execute command (will not execute in test mode)
         data = dict(key=dest, value_old=value_current, value_new=value_new)
         # pylint: disable=W0212
         if dest == 'pcidevs':
-            value_combined = value_current.copy()
+            value_combined = value_current[:]
             for dev_id in value_new:
-                dev = args.vm.app.domains['dom0'].\
-                      devices['pci'][dev_id.strip()]
+                dev_id_api = dev_id.strip().replace(':', '_')
+                current_assignment = None
+                for a in args.vm.devices['pci'].assignments():
+                    if a.ident == dev_id_api:
+                        current_assignment = a
+                if current_assignment and \
+                        current_assignment.options.get('no-strict-reset', False) != pci_strictreset:
+                    # detach and attach again to adjust options
+                    args.vm.devices['pci'].detach(current_assignment)
+
                 try:
-                    args.vm.devices['pci'].attach(dev)
+                    options = {}
+                    if not pci_strictreset:
+                        options['no-strict-reset'] = True
+                    assignment = qubesadmin.devices.DeviceAssignment(
+                        args.vm.app.domains['dom0'],
+                        dev_id_api,
+                        options,
+                        persistent=True)
+                    args.vm.devices['pci'].attach(assignment)
                 except qubesadmin.exc.DeviceAlreadyAttached:
                     continue
                 value_combined.append(dev_id)
