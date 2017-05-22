@@ -1061,6 +1061,206 @@ def service(vmname, *varargs, **kwargs):
     return qvm.status()
 
 
+def features(vmname, *varargs, **kwargs):
+    '''
+    Manage a virtual machine domain features::
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        qubesctl qvm.features <vm-name> [list]
+        qubesctl qvm.features <vm_name> (enable|disable|default) feature [feature...]
+
+        # List
+        qubesctl qvm.features sys-net
+
+        # Enable
+        qubesctl qvm.features <vm_name> enable feature1 feature2
+
+        # Disable
+        qubesctl qvm.features <vm_name> disable feature1 feature2
+
+        # Default
+        qubesctl qvm.features <vm_name> default feature1 feature2
+
+        # Combined
+        qubesctl qvm.features <vm_name> enable='[feature1, feature2, feature3]' disable='[feature4, feature5]'
+
+    Valid actions:
+
+    .. code-block:: yaml
+
+        # Required Positional
+        - name:                 <vmname>
+        - action:               [list|enable|disable|default]
+        - features:             [string,]
+
+    Example:
+
+    .. code-block:: yaml
+
+        # List
+        test-vm-1:  # (test-vm-1 is the VM name)
+          qvm.features:
+            - list: []
+
+        test-vm-2:
+          qvm.features: []
+
+        some-label-that-is-not-the-vm-name:
+          qvm.features:
+            - name: test-vm-3
+
+        # Enable, disable, default
+        test-vm-4:
+          qvm.features:
+            - enable:
+              - feature1
+              - feature2
+            - disable:
+              - feature3
+              - feature4
+            - default:
+              - feature5
+              - feature6
+
+    '''
+    # Also allow CLI qubesctl qvm.features <vm_name> (enable|disable|default) feature [feature...]
+    if varargs and varargs[0] in ['enable', 'disable', 'default']:
+        features = []
+        for feature in varargs[1:]:
+            features.append(feature)
+        if features:
+            kwargs[varargs[0]] = features
+    elif varargs and varargs[0] in ['set']:
+        features = {}
+        for feature in  varargs[1:]:
+            feature_name, feature_value = feature.split('=', 1)
+            features[feature_name] = feature_value
+        if features:
+            kwargs[varargs[0]] = features
+
+    # Set default status-mode to show all status entries
+    kwargs.setdefault('status-mode', 'all')
+
+    qvm = _QVMBase('qvm.features', **kwargs)
+    qvm.parser.add_argument(
+        'vmname',
+        action=_VMAction,
+        help='Virtual machine name'
+    )
+    qvm.parser.add_argument('--list', nargs='*', help='List features')
+    qvm.parser.add_argument(
+        '--enable',
+        nargs='*',
+        default=[],
+        help='List of feature names to enable'
+    )
+    qvm.parser.add_argument(
+        '--disable',
+        nargs='*',
+        default=[],
+        help='List of feature names to disable'
+    )
+    qvm.parser.add_argument(
+        '--default',
+        nargs='*',
+        default=[],
+        help='List of feature names to default'
+    )
+
+    # pylint: disable=W0613
+    def run_post(cmd, status, data):
+        '''
+        Called by run to allow additional post-processing of status.
+        '''
+        if status.passed():
+            status.changes.setdefault(data['key'], {})
+            status.changes[data['key']]['old'] = data['value_old']
+            status.changes[data['key']]['new'] = data['value_new']
+
+    def label(value):
+        '''
+        Return a mapped service label.
+        '''
+        if value == '1':
+            return 'Enabled'
+        elif value == '':
+            return 'Disabled'
+        elif value is None:
+            return 'Missing'
+        return value
+
+    # action value map
+    action_map = dict(enable='1', disable='', default=None)
+
+    args = qvm.parse_args(vmname, *varargs, **kwargs)
+    current_features = dict([(k, v) for k, v in args.vm.features.items()])
+
+    # Return all current features if a 'list' only was selected
+    if args.list is not None or not (
+        args.enable or args.disable or args.default
+    ):
+        for feature_name, value in current_features.items():
+            message = feature_name
+            if value == '1':
+                prefix = '[ENABLED]  '
+            elif not value:
+                prefix = '[DISABLED] '
+            else:
+                prefix = '[SET]      '
+                message += ': ' + value
+            qvm.save_status(prefix=prefix, message=message)
+        return qvm.status()
+
+    # Remove duplicate feature names; keeping order listed
+    seen = set()
+    for action in [args.default, args.disable, args.enable]:
+        for value in action:
+            if value not in seen:
+                seen.add(value)
+            else:
+                action.remove(value)
+
+    changed = False
+    for action in ['enable', 'disable', 'default']:
+        feature_names = getattr(args, action, [])
+        for feature_name in feature_names:
+            value_current = current_features.get(feature_name, None)
+            value_new = action_map[action]
+
+            # Value matches; no need to update
+            if value_current == value_new:
+                message = 'Feature already in desired state: {0} \'{1}\' = {2}'.format(
+                    action.upper(), feature_name, label(value_current)
+                )
+                qvm.save_status(prefix='[SKIP] ', message=message)
+                continue
+
+            # Execute command (will not execute in test mode)
+            data = dict(
+                key=feature_name,
+                value_old=label(value_current),
+                value_new=label(value_new)
+            )
+
+            if not __opts__['test']:
+                if value_new is None:
+                    del args.vm.features[feature_name]
+                else:
+                    args.vm.features[feature_name] = value_new
+                changed = True
+            status = qvm.save_status(retcode=0)
+            status.changes.setdefault(feature_name, {})
+            status.changes[feature_name]['old'] = current_features.get(feature_name, Null)
+            status.changes[feature_name]['new'] = value_new
+
+    # Returns the status 'data' dictionary
+    return qvm.status()
+
+
+
 def run(vmname, *varargs, **kwargs):
     '''
     Run an application within a virtual machine domain::

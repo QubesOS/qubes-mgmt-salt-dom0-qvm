@@ -298,9 +298,16 @@ def prefs(name, *varargs, **kwargs):
 
 def service(name, *varargs, **kwargs):
     '''
-    Manage vmname service (qvm-service).
+    Manage vmname service (qvm-service). In Qubes 4.0 stored as features.
     '''
     return _state_action('qvm.service', name, *varargs, **kwargs)
+
+
+def features(name, *varargs, **kwargs):
+    '''
+    Manage vmname features (qvm-features).
+    '''
+    return _state_action('qvm.features', name, *varargs, **kwargs)
 
 
 # pylint: disable=W0613,C0103
@@ -352,6 +359,7 @@ def vm(name, *varargs, **kwargs):
         'clone',
         'prefs',
         'service',
+        'features',
         'unpause',
         'pause',
         'shutdown',

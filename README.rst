@@ -289,7 +289,7 @@ Get vmname preferences.
 ``qvm.service``
 ---------------
 
-Manage vmname service.
+Backward compatibility wrapper. Use features with `service/` prefix.
 
 .. code-block:: yaml
 
@@ -304,6 +304,34 @@ Manage vmname service.
                 - another_test3
             - disable:
                 - meminfo-writer
+                - test3
+                - test4
+                - another_test4
+                - another_test5
+            - default:
+                - another_test5
+                - does_not_exist
+            # list: []
+            # list: [string,]
+
+``qvm.features``
+---------------
+
+Manage vmname features.
+
+.. code-block:: yaml
+
+    qvm-features-id:
+        qvm.features:
+            - name: <vmname>
+            - enable:
+                - test
+                - test2
+                - another_test
+                - another_test2
+                - another_test3
+            - disable:
+                - service/meminfo-writer
                 - test3
                 - test4
                 - another_test4
@@ -330,6 +358,7 @@ Wrapper to contain all VM state functions.
 
     - prefs
     - service
+    - features
 
 - Power:
 
@@ -359,7 +388,7 @@ Sample test VM creation containing all of the state actions:
             - present
             - exists
             - prefs
-            - service
+            - features
             - start
             - running
             - pause
@@ -386,7 +415,7 @@ Sample test VM creation containing all of the state actions:
             - maxmem: 4000
             - include-in-backups: false
             - netvm: sys-firewall
-        - service:
+        - features:
             - enable:
                 - test
                 - test2
@@ -394,7 +423,7 @@ Sample test VM creation containing all of the state actions:
                 - another_test2
                 - another_test3
             - disable:
-                - meminfo-writer
+                - service/meminfo-writer
                 - test3
                 - test4
                 - another_test4
