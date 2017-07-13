@@ -289,7 +289,7 @@ Get vmname preferences.
 ``qvm.service``
 ---------------
 
-Backward compatibility wrapper. Use features with `service/` prefix.
+Backward compatibility wrapper. Use features with `service.` prefix.
 
 .. code-block:: yaml
 
@@ -331,7 +331,7 @@ Manage vmname features.
                 - another_test2
                 - another_test3
             - disable:
-                - service/meminfo-writer
+                - service.meminfo-writer
                 - test3
                 - test4
                 - another_test4
@@ -423,7 +423,7 @@ Sample test VM creation containing all of the state actions:
                 - another_test2
                 - another_test3
             - disable:
-                - service/meminfo-writer
+                - service.meminfo-writer
                 - test3
                 - test4
                 - another_test4

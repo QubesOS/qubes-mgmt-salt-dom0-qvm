@@ -1028,8 +1028,8 @@ def service(vmname, *varargs, **kwargs):
     action_map = dict(enable='1', disable='', default=None)
 
     args = qvm.parse_args(vmname, *varargs, **kwargs)
-    current_services = dict([(k[len('service/'):], v) for k, v
-            in args.vm.features.items() if k.startswith('service/')])
+    current_services = dict([(k[len('service.'):], v) for k, v
+            in args.vm.features.items() if k.startswith('service.')])
 
     # Return all current services if a 'list' only was selected
     if args.list is not None or not (
@@ -1076,9 +1076,9 @@ def service(vmname, *varargs, **kwargs):
 
             if not __opts__['test']:
                 if value_new is None:
-                    del args.vm.features['service/' + service_name]
+                    del args.vm.features['service.' + service_name]
                 else:
-                    args.vm.features['service/' + service_name] = value_new
+                    args.vm.features['service.' + service_name] = value_new
                 changed = True
             status = qvm.save_status(retcode=0)
             status.changes.setdefault(service_name, {})
