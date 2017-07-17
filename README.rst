@@ -252,6 +252,7 @@ Set vmname preferences.
             - kernelopts:         nopat iommu=soft swiotlb=8192
             - mac:                auto
             - debug:              true
+            - virt-mode:          hvm
             - default-user:       tester
             - qrexec-timeout:     120
             - internal:           true
