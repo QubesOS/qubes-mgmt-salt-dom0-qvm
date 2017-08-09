@@ -623,6 +623,7 @@ def prefs(vmname, *varargs, **kwargs):
         - autostart:            true|(false)
         - debug:                true|(false)
         - default-user:         <string>
+        - dispvm-allowed:       true|false
         - virt-mode:            (hvm|pv)
         - include-in-backups:   true|false
         - installed-by-rpm:     true|false
@@ -725,6 +726,7 @@ def prefs(vmname, *varargs, **kwargs):
     properties.add_argument('--autostart', nargs=1, type=bool, default=False)
     properties.add_argument('--debug', nargs=1, type=bool, default=False)
     properties.add_argument('--default-user', '--default_user', nargs=1)
+    properties.add_argument('--dispvm-allowed', nargs=1, type=bool)
     properties.add_argument('--virt-mode', '--virt_mode', nargs=1)
     properties.add_argument(
         '--label',
