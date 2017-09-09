@@ -1285,7 +1285,7 @@ def features(vmname, *varargs, **kwargs):
                 changed = True
             status = qvm.save_status(retcode=0)
             status.changes.setdefault(feature_name, {})
-            status.changes[service_name]['old'] = current_services.get(service_name, None)
+            status.changes[feature_name]['old'] = current_features.get(feature_name, None)
             status.changes[feature_name]['new'] = value_new
 
     # Returns the status 'data' dictionary
