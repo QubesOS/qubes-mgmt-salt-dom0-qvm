@@ -310,6 +310,13 @@ def features(name, *varargs, **kwargs):
     return _state_action('qvm.features', name, *varargs, **kwargs)
 
 
+def tags(name, *varargs, **kwargs):
+    '''
+    Manage vmname tags (qvm-tags).
+    '''
+    return _state_action('qvm.tags', name, *varargs, **kwargs)
+
+
 # pylint: disable=W0613,C0103
 def vm(name, *varargs, **kwargs):
     '''
@@ -360,6 +367,7 @@ def vm(name, *varargs, **kwargs):
         'prefs',
         'service',
         'features',
+        'tags',
         'unpause',
         'pause',
         'shutdown',

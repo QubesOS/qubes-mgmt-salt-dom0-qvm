@@ -1292,6 +1292,141 @@ def features(vmname, *varargs, **kwargs):
     return qvm.status()
 
 
+def tags(vmname, *varargs, **kwargs):
+    '''
+    Manage a virtual machine domain tags::
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        qubesctl qvm.tags <vm-name> [list]
+        qubesctl qvm.tags <vm_name> (add|del) tag [tag...]
+
+        # List
+        qubesctl qvm.tags sys-net
+
+        # Add
+        qubesctl qvm.tags <vm_name> add tag1 tag2
+
+        # Delete
+        qubesctl qvm.tags <vm_name> del tag1 tag2
+
+        # Combined
+        qubesctl qvm.tags <vm_name> add='[tag1, tag2, tag3]' del='[tag4, tag5]'
+
+    Valid actions:
+
+    .. code-block:: yaml
+
+        # Required Positional
+        - name:                 <vmname>
+        - action:               [list|add|del]
+        - tags:             [string,]
+
+    Example:
+
+    .. code-block:: yaml
+
+        # List
+        test-vm-1:  # (test-vm-1 is the VM name)
+          qvm.tags:
+            - list: []
+
+        test-vm-2:
+          qvm.tags: []
+
+        some-label-that-is-not-the-vm-name:
+          qvm.tags:
+            - name: test-vm-3
+
+        # Enable, disable, default
+        test-vm-4:
+          qvm.tags:
+            - add:
+              - tag1
+              - tag2
+            - del:
+              - tag3
+              - tag4
+
+    '''
+    # Also allow CLI qubesctl qvm.tags <vm_name> (add|del) tag [tag...]
+    if varargs and varargs[0] in ['add', 'del']:
+        tags = []
+        for tag in varargs[1:]:
+            tags.append(tag)
+        if tags:
+            kwargs[varargs[0]] = tags
+
+    qvm = _QVMBase('qvm.tags', **kwargs)
+    qvm.parser.add_argument(
+        'vmname',
+        action=_VMAction,
+        help='Virtual machine name'
+    )
+    qvm.parser.add_argument('--list', dest='do_list', nargs='*', help='List tags')
+    qvm.parser.add_argument(
+        '--add', dest='do_add',
+        nargs='*',
+        default=[],
+        help='List of tag names to enable'
+    )
+    qvm.parser.add_argument(
+        '--del', dest='do_del',
+        nargs='*',
+        default=[],
+        help='List of tag names to disable'
+    )
+
+    args = qvm.parse_args(vmname, *varargs, **kwargs)
+    current_tags = set(args.vm.tags)
+
+    # Return all current tags if a 'list' only was selected
+    if args.do_list is not None or not (
+            args.do_add or args.do_del):
+        for tag in current_tags:
+            qvm.save_status(message=tag)
+        return qvm.status()
+
+    # Remove duplicate tag names; keeping order listed
+    seen = set()
+    for action in [args.do_del, args.do_add]:
+        for value in action:
+            if value not in seen:
+                seen.add(value)
+            else:
+                action.remove(value)
+
+    if not __opts__['test']:
+        try:
+            for tag in args.do_add:
+                args.vm.tags.add(tag)
+            for tag in args.do_del:
+                args.vm.tags.discard(tag)
+        except qubesadmin.exc.QubesException as e:
+            status = qvm.save_status(retcode=1, message=str(e))
+            return qvm.status()
+        new_tags = set(args.vm.tags)
+    else:
+        new_tags = current_tags.copy()
+        for tag in args.do_add:
+            new_tags.add(tag)
+        for tag in args.do_del:
+            new_tags.discard(tag)
+
+    if new_tags != current_tags:
+        status = qvm.save_status(retcode=0)
+        status.changes['old'] = list(sorted(current_tags))
+        status.changes['new'] = list(sorted(new_tags))
+    else:
+        qvm.save_status(prefix='[SKIP] ',
+            message='All requested tags already set: ' +
+            ','.join(sorted(current_tags)))
+
+    # Returns the status 'data' dictionary
+    return qvm.status()
+
 
 def run(vmname, *varargs, **kwargs):
     '''

@@ -343,6 +343,30 @@ Manage vmname features.
             # list: []
             # list: [string,]
 
+``qvm.tags``
+---------------
+
+Manage vmname tags.
+
+.. code-block:: yaml
+
+    qvm-tags-id:
+        qvm.tags:
+            - name: <vmname>
+            - add:
+                - test
+                - test2
+                - another_test
+                - another_test2
+                - another_test3
+            - del:
+                - test3
+                - test4
+                - another_test4
+                - another_test5
+            # list: []
+            # list: [string,]
+
 ``qvm.vm``
 ----------
 
@@ -360,6 +384,7 @@ Wrapper to contain all VM state functions.
     - prefs
     - service
     - features
+    - tags
 
 - Power:
 
@@ -432,6 +457,13 @@ Sample test VM creation containing all of the state actions:
             - default:
                 - another_test5
                 - does_not_exist
+        - tags:
+            - add:
+                - tag1
+                - tag2
+            - del:
+                - tag3
+                - tag4
         - start: []
         - running: []
         - pause: []
