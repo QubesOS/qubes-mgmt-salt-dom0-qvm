@@ -623,7 +623,7 @@ def prefs(vmname, *varargs, **kwargs):
         - autostart:            true|(false)
         - debug:                true|(false)
         - default-user:         <string>
-        - dispvm-allowed:       true|false
+        - template-for-dispvms: true|false
         - virt-mode:            (hvm|pv)
         - include-in-backups:   true|false
         - installed-by-rpm:     true|false
@@ -726,7 +726,11 @@ def prefs(vmname, *varargs, **kwargs):
     properties.add_argument('--autostart', nargs=1, type=bool, default=False)
     properties.add_argument('--debug', nargs=1, type=bool, default=False)
     properties.add_argument('--default-user', '--default_user', nargs=1)
-    properties.add_argument('--dispvm-allowed', nargs=1, type=bool)
+    properties.add_argument(
+            '--template-for-dispvms',
+            '--template_for_dispvms',
+            '--dispvm-allowed',
+            nargs=1, type=bool)
     properties.add_argument('--virt-mode', '--virt_mode', nargs=1)
     properties.add_argument(
         '--label',
@@ -788,6 +792,7 @@ def prefs(vmname, *varargs, **kwargs):
     # Maps property keys to vm attributes
     property_map = {
         'last_backup': 'backup_timestamp',
+        'dispvm_allowed': 'template_for_dispvms',
     }
 
     # pylint: disable=W0613
@@ -824,6 +829,7 @@ def prefs(vmname, *varargs, **kwargs):
 
         # Qubes keys are stored with underscrores ('_'), not hyphens ('-')
         dest = key.replace('-', '_')
+        dest = property_map.get(dest, dest)
 
         if dest == 'pcidevs':
             value_current = [str(dev.ident).replace('_', ':') for dev
@@ -832,7 +838,7 @@ def prefs(vmname, *varargs, **kwargs):
             value_current = all(not assignment.options.get('no-strict-reset', False)
                     for assignment in args.vm.devices['pci'].assignments(True))
         else:
-            value_current = getattr(args.vm, property_map.get(dest, dest), Null)
+            value_current = getattr(args.vm, dest, Null)
             value_current = getattr(value_current, 'name', value_current)
 
         if args.action in ['list', 'get', 'gry']:
