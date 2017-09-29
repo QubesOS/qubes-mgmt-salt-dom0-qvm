@@ -340,12 +340,15 @@ def create(vmname, *varargs, **kwargs):
           - hvm-template
           - net
           - standalone
-          - internal
-          - force-root
           - quiet
     '''
     qvm = _QVMBase('qvm.create', **kwargs)
     qvm.parser.add_argument('--quiet', action='store_true', help='Quiet')
+    qvm.parser.add_argument(
+        '--net',
+        action='store_true',
+        help='Create NetVM'
+    )
     qvm.parser.add_argument(
         '--proxy',
         action='store_true',
@@ -367,17 +370,6 @@ def create(vmname, *varargs, **kwargs):
         help='Create standalone VM - independent of template'
     )
     qvm.parser.add_argument(
-        '--internal',
-        action='store_true',
-        help=
-        'Create VM for internal use only (hidden in qubes- manager, no appmenus)'
-    )
-    qvm.parser.add_argument(
-        '--force-root',
-        action='store_true',
-        help='Force to run, even with root privileges'
-    )
-    qvm.parser.add_argument(
         '--template',
         nargs=1,
         help='Specify the TemplateVM to use'
@@ -387,6 +379,12 @@ def create(vmname, *varargs, **kwargs):
         nargs=1,
         help=
         'Specify the label to use for the new VM (e.g. red, yellow, green, ...)'
+    )
+    qvm.parser.add_argument(
+        '--mem',
+        nargs=1,
+        help=
+        'Specify the initial memory size of the VM'
     )
     qvm.parser.add_argument(
         '--root-move-from',
@@ -403,6 +401,37 @@ def create(vmname, *varargs, **kwargs):
     qvm.parser.add_argument('--vcpus', nargs=1, help='VCPUs count')
     qvm.parser.add_argument('vmname', help='Virtual machine name')
     args = qvm.parse_args(vmname, *varargs, **kwargs)
+
+    vmclass = 'AppVM'
+    if args.hvm_template:
+        vmclass = 'TemplateVM'
+    elif args.standalone:
+        vmclass = 'StandaloneVM'
+
+    properties = {}
+    if args.mem:
+        properties['memory'] = args.mem[0]
+    if args.vcpus:
+        properties['vcpus'] = args.vcpus[0]
+    if args.hvm:
+        properties['virt_mode'] = 'hvm'
+    if args.proxy or args.net:
+        properties['provides_network'] = 'True'
+    if args.net:
+        properties['netvm'] = ''
+
+    options = ['--class=' + vmclass]
+    if args.root_move_from:
+        options.append('--root-move-from=' + args.root_move_from[0])
+    if args.root_copy_from:
+        options.append('--root-copy-from=' + args.root_copy_from[0])
+    if args.template:
+        options.append('--template=' + args.template[0])
+    if args.label:
+        options.append('--label=' + args.label[0])
+
+    for name, value in properties.items():
+        options.append('--property=' + name + '=' + value)
 
     # pylint: disable=W0613
     def missing_post_hook(cmd, status, data):
@@ -423,12 +452,8 @@ def create(vmname, *varargs, **kwargs):
         return qvm.status()
 
     # Execute command (will not execute in test mode)
-    cmd = '/usr/bin/qvm-create {0}'.format(' '.join(args._argv))  # pylint: disable=W0212
+    cmd = '/usr/bin/qvm-create {} {}'.format(args.vmname, ' '.join(options))  # pylint: disable=W0212
     status = qvm.run(cmd)  # pylint: disable=W0612
-
-    # Confirm VM has been created (don't fail in test mode)
-    if not __opts__['test']:
-        qvm.save_status(check(args.vmname, *['exists']))
 
     # Returns the status 'data' dictionary
     return qvm.status()
