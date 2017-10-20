@@ -864,6 +864,8 @@ def prefs(vmname, *varargs, **kwargs):
         elif dest == 'pci_strictreset':
             value_current = all(not assignment.options.get('no-strict-reset', False)
                     for assignment in args.vm.devices['pci'].assignments(True))
+        elif args.vm.property_is_default(dest):
+            value_current = '*default*'
         else:
             value_current = getattr(args.vm, dest, Null)
             value_current = getattr(value_current, 'name', value_current)

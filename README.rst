@@ -233,7 +233,8 @@ Run command in virtual machine domain.
 ``qvm.prefs``
 -------------
 
-Set vmname preferences.
+Set vmname preferences. Use `*default*` special value to reset property to its
+default value.
 
 .. code-block:: yaml
 
