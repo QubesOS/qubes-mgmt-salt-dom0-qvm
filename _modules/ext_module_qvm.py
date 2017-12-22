@@ -1337,6 +1337,7 @@ def tags(vmname, *varargs, **kwargs):
 
         qubesctl qvm.tags <vm-name> [list]
         qubesctl qvm.tags <vm_name> (add|del) tag [tag...]
+        qubesctl qvm.tags <vm_name> (present|absent) tag [tag...]
 
         # List
         qubesctl qvm.tags sys-net
@@ -1356,7 +1357,7 @@ def tags(vmname, *varargs, **kwargs):
 
         # Required Positional
         - name:                 <vmname>
-        - action:               [list|add|del]
+        - action:               [list|add|del|present|absent]
         - tags:             [string,]
 
     Example:
@@ -1375,7 +1376,7 @@ def tags(vmname, *varargs, **kwargs):
           qvm.tags:
             - name: test-vm-3
 
-        # Enable, disable, default
+        # Add, delete
         test-vm-4:
           qvm.tags:
             - add:
@@ -1387,7 +1388,7 @@ def tags(vmname, *varargs, **kwargs):
 
     '''
     # Also allow CLI qubesctl qvm.tags <vm_name> (add|del) tag [tag...]
-    if varargs and varargs[0] in ['add', 'del']:
+    if varargs and varargs[0] in ['add', 'del', 'present', 'absent']:
         tags = []
         for tag in varargs[1:]:
             tags.append(tag)
@@ -1402,13 +1403,13 @@ def tags(vmname, *varargs, **kwargs):
     )
     qvm.parser.add_argument('--list', dest='do_list', nargs='*', help='List tags')
     qvm.parser.add_argument(
-        '--add', dest='do_add',
+        '--add', '--present', dest='do_add',
         nargs='*',
         default=[],
         help='List of tag names to enable'
     )
     qvm.parser.add_argument(
-        '--del', dest='do_del',
+        '--del', '--absent', dest='do_del',
         nargs='*',
         default=[],
         help='List of tag names to disable'
