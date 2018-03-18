@@ -1,7 +1,6 @@
-%{!?version: %define version %(cat version)}
 
 Name:      qubes-mgmt-salt-dom0-qvm
-Version:   %{version}
+Version:   @VERSION@
 Release:   1%{?dist}
 Summary:   Salt formula to interface to many of the Qubes dom0 qvm-* tools via a state file or module
 License:   GPL 2.0
@@ -13,17 +12,14 @@ Requires:  qubes-mgmt-salt
 Requires:  qubes-mgmt-salt-dom0
 Requires:  python2-qubesadmin
 
-%define _builddir %(pwd)
+
+Source0: %{name}-%{version}.tar.gz
 
 %description
 Salt formula to interface to many of the Qubes dom0 qvm-* tools via a state file or module
 
 %prep
-# we operate on the current directory, so no need to unpack anything
-# symlink is to generate useful debuginfo packages
-rm -f %{name}-%{version}
-ln -sf . %{name}-%{version}
-%setup -T -D
+%setup -q
 
 %build
 
