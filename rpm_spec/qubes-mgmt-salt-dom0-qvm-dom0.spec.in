@@ -51,3 +51,4 @@ qubesctl saltutil.sync_all refresh=true -l quiet --out quiet > /dev/null || true
 /srv/formulas/test/qvm-formula/qvm/init.top
 
 %changelog
+@CHANGELOG@
