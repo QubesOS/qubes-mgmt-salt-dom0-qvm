@@ -874,8 +874,12 @@ def prefs(vmname, *varargs, **kwargs):
             qvm.save_status(prefix='', message=fmt.format(dest, value_current))
             continue
 
-        # Value matches; no need to update
         value_new = kwargs[key]
+        if key in ('netvm', 'default_dispvm', 'management_dispvm'):
+            if value_new in ('none', ''):
+                value_new = None
+
+        # Value matches; no need to update
         if value_current == value_new:
             message = fmt.format(dest, value_current)
             qvm.save_status(prefix='[SKIP] ', message=message)
@@ -920,21 +924,16 @@ def prefs(vmname, *varargs, **kwargs):
             status.changes[data['key']]['old'] = data['value_old']
             status.changes[data['key']]['new'] = value_combined
         else:
-            if value_new is not None:
-                log.info("Setting %s to %s", dest, value_new)
-                setattr(args.vm, dest, value_new)
-                status = qvm.save_status(retcode=0)
-                status.changes.setdefault(data['key'], {})
-                status.changes[data['key']]['old'] = data['value_old']
-                status.changes[data['key']]['new'] = data['value_new']
-                changed = True
-            else:
+            log.info("Setting %s to %s", dest, value_new)
+            if value_new == '*default*':
                 delattr(args.vm, dest)
-                status = qvm.save_status(retcode=0)
-                status.changes.setdefault(data['key'], {})
-                status.changes[data['key']]['old'] = data['value_old']
-                status.changes[data['key']]['new'] = None
-                changed = True
+            else:
+                setattr(args.vm, dest, value_new)
+            status = qvm.save_status(retcode=0)
+            status.changes.setdefault(data['key'], {})
+            status.changes[data['key']]['old'] = data['value_old']
+            status.changes[data['key']]['new'] = data['value_new']
+            changed = True
 
     # Returns the status 'data' dictionary
     return qvm.status()
