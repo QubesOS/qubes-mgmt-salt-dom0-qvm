@@ -654,6 +654,7 @@ def prefs(vmname, *varargs, **kwargs):
         - include-in-backups:   true|false
         - installed-by-rpm:     true|false
         - internal:             true|(false)
+        - ip:                   <string>
         - kernel:               <string>
         - kernelopts:           <string>
         - label:                red|yellow|green|blue|purple|orange|gray|black
@@ -781,6 +782,7 @@ def prefs(vmname, *varargs, **kwargs):
         type=bool
     )
     properties.add_argument('--internal', nargs=1, type=bool, default=False)
+    properties.add_argument('--ip', nargs=1)
     properties.add_argument('--kernel', nargs=1)
     properties.add_argument('--kernelopts', nargs=1)
     properties.add_argument('--mac', nargs=1)
