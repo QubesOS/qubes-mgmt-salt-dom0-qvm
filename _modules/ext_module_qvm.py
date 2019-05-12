@@ -1594,7 +1594,7 @@ def run(vmname, *varargs, **kwargs):
     if args.auto:
         start_status = qvm.save_status(
             start(
-                args.vmname, **{'flags': ['quiet', 'no-guid']}
+                args.vmname, **{'flags': ['quiet']}
             )
         )
         if start_status.failed():
@@ -1634,33 +1634,15 @@ def start(vmname, *varargs, **kwargs):
         # Optional Flags
         - flags:
           - quiet
-          - tray
-          - no-guid
-          - dvm
           - debug
           - install-windows-tools
     '''
     qvm = _QVMBase('qvm.start', **kwargs)
     qvm.parser.add_argument('--quiet', action='store_true', help='Quiet')
     qvm.parser.add_argument(
-        '--tray',
-        action='store_true',
-        help='Use tray notifications instead of stdout'
-    )
-    qvm.parser.add_argument(
-        '--no-guid',
-        action='store_true',
-        help='Do not start the GUId (ignored)'
-    )
-    qvm.parser.add_argument(
         '--install-windows-tools',
         action='store_true',
         help='Attach Windows tools CDROM to the VM'
-    )
-    qvm.parser.add_argument(
-        '--dvm',
-        action='store_true',
-        help='Do actions necessary when preparing DVM image'
     )
     qvm.parser.add_argument(
         '--debug',

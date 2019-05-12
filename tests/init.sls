@@ -232,9 +232,6 @@ qvm-start-id:
     # custom-config: <string>
     # flags:
       # quiet  # *** salt default ***
-      # no-guid  # *** salt default ***
-      # tray
-      # dvm
       # debug
       # install-windows-tools
 {% endif %}
