@@ -429,7 +429,6 @@ fi
 #      # custom-config: <string>
 #      # flags:
 #        # quiet  # *** salt default ***
-#        # no-guid  # *** salt default ***
 #        # tray
 #        # dvm
 #        # debug
@@ -607,9 +606,6 @@ fi
 #          # another_test5
 #      - start: []
 #        # flags:
-#          # tray
-#          # no-guid
-#          # dvm
 #          # debug
 #          # install-windows-tools
 #          # drive: DRIVE

@@ -198,7 +198,7 @@ def start(name, *varargs, **kwargs):
     Start vmname (qvm-start).
     '''
     kwargs.setdefault('flags', [])
-    kwargs['flags'].extend(['quiet', 'no-guid'])
+    kwargs['flags'].extend(['quiet'])
     return _state_action('qvm.start', name, *varargs, **kwargs)
 
 
