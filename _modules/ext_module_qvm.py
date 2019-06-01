@@ -513,7 +513,7 @@ def remove(vmname, *varargs, **kwargs):
             return qvm.status()
 
     # Execute command (will not execute in test mode)
-    cmd = '/usr/bin/qvm-remove {0}'.format(' '.join(args._argv))  # pylint: disable=W0212
+    cmd = '/usr/bin/qvm-remove --force {0}'.format(' '.join(args._argv))  # pylint: disable=W0212
     status = qvm.run(cmd)  # pylint: disable=W0612
 
     # Confirm VM has been removed (don't fail in test mode)
