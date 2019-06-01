@@ -653,7 +653,6 @@ def prefs(vmname, *varargs, **kwargs):
         - virt-mode:            (hvm|pv)
         - include-in-backups:   true|false
         - installed-by-rpm:     true|false
-        - internal:             true|(false)
         - ip:                   <string>
         - kernel:               <string>
         - kernelopts:           <string>
@@ -668,7 +667,6 @@ def prefs(vmname, *varargs, **kwargs):
         - pci-strictreset:      true|false
         - pcidevs:              [string,]
         - template:             <string>
-        - type:                 <string>
         - qrexec-timeout:       <int> (60)
         - vcpus:                <int>
 
@@ -781,7 +779,6 @@ def prefs(vmname, *varargs, **kwargs):
         nargs=1,
         type=bool
     )
-    properties.add_argument('--internal', nargs=1, type=bool, default=False)
     properties.add_argument('--ip', nargs=1)
     properties.add_argument('--kernel', nargs=1)
     properties.add_argument('--kernelopts', nargs=1)
@@ -800,7 +797,6 @@ def prefs(vmname, *varargs, **kwargs):
     properties.add_argument('--provides-network', nargs=1, type=bool,
             default=False)
     properties.add_argument('--template', nargs=1)
-    properties.add_argument('--type', nargs=1)
     properties.add_argument(
         '--qrexec-timeout',
         '--qrexec_timeout',
