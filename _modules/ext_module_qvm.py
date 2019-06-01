@@ -807,13 +807,6 @@ def prefs(vmname, *varargs, **kwargs):
     properties.add_argument('--updateable', nargs=1, type=bool)
     properties.add_argument('--vcpus', nargs=1, type=int)
 
-    # The following args seem not to exist in the Qubes R3.0 DB
-    # properties.add_argument('--timezone', nargs='?')
-    # properties.add_argument('--drive', nargs='?')
-    # properties.add_argument('--qrexec-installed', nargs='?', type=bool)
-    # properties.add_argument('--guiagent-installed', nargs='?', type=bool)
-    # properties.add_argument('--seamless-gui-mode', nargs='?', type=bool)
-
     # Maps property keys to vm attributes
     property_map = {
         'last_backup': 'backup_timestamp',
