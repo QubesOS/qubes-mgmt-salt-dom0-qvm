@@ -328,6 +328,7 @@ def create(vmname, *varargs, **kwargs):
         # Optional
         - template:             <template>
         - label:                <label>
+        - class:                <class>
         - mem:                  <mem>
         - vcpus:                <vcpus>
         - root-move-from:       <root_move>
@@ -381,6 +382,13 @@ def create(vmname, *varargs, **kwargs):
         'Specify the label to use for the new VM (e.g. red, yellow, green, ...)'
     )
     qvm.parser.add_argument(
+        '--class',
+        nargs=1,
+        dest='klass',
+        help='Class of the new domain (default: "AppVM"'
+             ' - see documentation for qvm-create for possible values)'
+    )
+    qvm.parser.add_argument(
         '--mem',
         nargs=1,
         help=
@@ -403,7 +411,9 @@ def create(vmname, *varargs, **kwargs):
     args = qvm.parse_args(vmname, *varargs, **kwargs)
 
     vmclass = 'AppVM'
-    if args.hvm_template:
+    if args.klass:
+        vmclass = args.klass[0]
+    elif args.hvm_template:
         vmclass = 'TemplateVM'
     elif args.standalone:
         vmclass = 'StandaloneVM'
