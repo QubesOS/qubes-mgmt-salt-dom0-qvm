@@ -411,12 +411,12 @@ def create(vmname, *varargs, **kwargs):
     args = qvm.parse_args(vmname, *varargs, **kwargs)
 
     vmclass = 'AppVM'
-    if args.klass:
-        vmclass = args.klass[0]
-    elif args.hvm_template:
+    if args.hvm_template:
         vmclass = 'TemplateVM'
     elif args.standalone:
         vmclass = 'StandaloneVM'
+    elif args.klass:
+        vmclass = args.klass[0]
 
     properties = {}
     if args.mem:
