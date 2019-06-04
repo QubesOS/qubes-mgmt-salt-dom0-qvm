@@ -670,6 +670,9 @@ def prefs(vmname, *varargs, **kwargs):
         - qrexec-timeout:       <int> (60)
         - vcpus:                <int>
 
+        # Read-only attributes
+        - klass
+
     Example:
 
     .. code-block:: yaml
@@ -779,6 +782,7 @@ def prefs(vmname, *varargs, **kwargs):
         nargs=1,
         type=bool
     )
+    properties.add_argument('--klass')
     properties.add_argument('--ip', nargs=1)
     properties.add_argument('--kernel', nargs=1)
     properties.add_argument('--kernelopts', nargs=1)
@@ -830,6 +834,12 @@ def prefs(vmname, *varargs, **kwargs):
             args.action = 'set'
         else:
             selected_properties = all_properties
+
+    # klass is a read-only attribute
+    if args.action == 'set' and 'klass' in kwargs:
+        raise SaltInvocationError(
+            message="Can't set read-only attribute 'klass'!"
+        )
 
     if 'action' in kwargs and kwargs['action'] == 'get' and varargs:
         result = set(varargs).difference(set(selected_properties))
