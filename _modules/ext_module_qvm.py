@@ -25,6 +25,7 @@ The following errors are used and raised in the circumstances as indicated:
 from __future__ import absolute_import
 import argparse  # pylint: disable=E0598
 import logging
+import json
 
 # Import salt libs
 from salt.exceptions import SaltInvocationError
@@ -1191,6 +1192,12 @@ def features(vmname, *varargs, **kwargs):
               - feature5
               - feature6
 
+        # Set particular feature with value
+        test-vm-5:
+          qvm.features:
+            - set:
+              - bridge_name: br0
+
     '''
     # Also allow CLI qubesctl qvm.features <vm_name> (enable|disable|default) feature [feature...]
     if varargs and varargs[0] in ['enable', 'disable', 'default']:
@@ -1206,6 +1213,13 @@ def features(vmname, *varargs, **kwargs):
             features[feature_name] = feature_value
         if features:
             kwargs[varargs[0]] = features
+
+    # Convert OrderedDict to dict:
+    if 'set' in kwargs:
+        for i in range(len(kwargs['set'])):
+            kwargs['set'][i] = dict(kwargs['set'][i])
+
+        kwargs['set'] = json.dumps(kwargs['set'])
 
     # Set default status-mode to show all status entries
     kwargs.setdefault('status-mode', 'all')
@@ -1234,6 +1248,12 @@ def features(vmname, *varargs, **kwargs):
         nargs='*',
         default=[],
         help='List of feature names to default'
+    )
+    qvm.parser.add_argument(
+        '--set',
+        nargs='*',
+        default=[],
+        help='List of feature names to set'
     )
 
     # pylint: disable=W0613
@@ -1264,9 +1284,13 @@ def features(vmname, *varargs, **kwargs):
     args = qvm.parse_args(vmname, *varargs, **kwargs)
     current_features = dict([(k, v) for k, v in args.vm.features.items()])
 
+    # post-process argparse 'set' values converted from string
+    if args.set:
+        args.set = json.loads(args.set[0])
+
     # Return all current features if a 'list' only was selected
     if args.list is not None or not (
-        args.enable or args.disable or args.default
+        args.enable or args.disable or args.default or args.set
     ):
         for feature_name, value in current_features.items():
             message = feature_name
@@ -1290,11 +1314,15 @@ def features(vmname, *varargs, **kwargs):
                 action.remove(value)
 
     changed = False
-    for action in ['enable', 'disable', 'default']:
+    for action in ['enable', 'disable', 'default', 'set']:
         feature_names = getattr(args, action, [])
         for feature_name in feature_names:
+            if action == 'set':
+                (feature_name, value_new), = feature_name.items()
+            else:
+                value_new = action_map[action]
+
             value_current = current_features.get(feature_name, None)
-            value_new = action_map[action]
 
             # Value matches; no need to update
             if value_current == value_new:
