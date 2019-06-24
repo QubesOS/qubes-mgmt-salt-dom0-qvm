@@ -524,7 +524,7 @@ def remove(vmname, *varargs, **kwargs):
             return qvm.status()
 
     # Execute command (will not execute in test mode)
-    cmd = '/usr/bin/qvm-remove {0}'.format(' '.join(args._argv))  # pylint: disable=W0212
+    cmd = '/usr/bin/qvm-remove --force {0}'.format(' '.join(args._argv))  # pylint: disable=W0212
     status = qvm.run(cmd)  # pylint: disable=W0612
 
     # Confirm VM has been removed (don't fail in test mode)
@@ -664,7 +664,6 @@ def prefs(vmname, *varargs, **kwargs):
         - virt-mode:            (hvm|pv)
         - include-in-backups:   true|false
         - installed-by-rpm:     true|false
-        - internal:             true|(false)
         - ip:                   <string>
         - kernel:               <string>
         - kernelopts:           <string>
@@ -679,7 +678,6 @@ def prefs(vmname, *varargs, **kwargs):
         - pci-strictreset:      true|false
         - pcidevs:              [string,]
         - template:             <string>
-        - type:                 <string>
         - qrexec-timeout:       <int> (60)
         - vcpus:                <int>
 
@@ -792,7 +790,6 @@ def prefs(vmname, *varargs, **kwargs):
         nargs=1,
         type=bool
     )
-    properties.add_argument('--internal', nargs=1, type=bool, default=False)
     properties.add_argument('--ip', nargs=1)
     properties.add_argument('--kernel', nargs=1)
     properties.add_argument('--kernelopts', nargs=1)
@@ -811,7 +808,6 @@ def prefs(vmname, *varargs, **kwargs):
     properties.add_argument('--provides-network', nargs=1, type=bool,
             default=False)
     properties.add_argument('--template', nargs=1)
-    properties.add_argument('--type', nargs=1)
     properties.add_argument(
         '--qrexec-timeout',
         '--qrexec_timeout',
@@ -821,13 +817,6 @@ def prefs(vmname, *varargs, **kwargs):
     )
     properties.add_argument('--updateable', nargs=1, type=bool)
     properties.add_argument('--vcpus', nargs=1, type=int)
-
-    # The following args seem not to exist in the Qubes R3.0 DB
-    # properties.add_argument('--timezone', nargs='?')
-    # properties.add_argument('--drive', nargs='?')
-    # properties.add_argument('--qrexec-installed', nargs='?', type=bool)
-    # properties.add_argument('--guiagent-installed', nargs='?', type=bool)
-    # properties.add_argument('--seamless-gui-mode', nargs='?', type=bool)
 
     # Maps property keys to vm attributes
     property_map = {
