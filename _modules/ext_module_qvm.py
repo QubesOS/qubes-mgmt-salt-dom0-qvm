@@ -344,105 +344,53 @@ def create(vmname, *varargs, **kwargs):
           - standalone
           - quiet
     '''
+
     qvm = _QVMBase('qvm.create', **kwargs)
-    qvm.parser.add_argument('--quiet', action='store_true', help='Quiet')
-    qvm.parser.add_argument(
-        '--net',
-        action='store_true',
-        help='Create NetVM'
-    )
-    qvm.parser.add_argument(
-        '--proxy',
-        action='store_true',
-        help='Create ProxyVM'
-    )
-    qvm.parser.add_argument(
-        '--hvm',
-        action='store_true',
-        help='Create HVM (standalone unless --template option used)'
-    )
-    qvm.parser.add_argument(
-        '--hvm-template',
-        action='store_true',
-        help='Create HVM template'
-    )
-    qvm.parser.add_argument(
-        '--standalone',
-        action='store_true',
-        help='Create standalone VM - independent of template'
-    )
-    qvm.parser.add_argument(
-        '--template',
-        nargs=1,
-        help='Specify the TemplateVM to use'
-    )
-    qvm.parser.add_argument(
-        '--label',
-        nargs=1,
-        help=
-        'Specify the label to use for the new VM (e.g. red, yellow, green, ...)'
-    )
-    qvm.parser.add_argument(
-        '--class',
-        nargs=1,
-        dest='klass',
-        help='Class of the new domain (default: "AppVM"'
-             ' - see documentation for qvm-create for possible values)'
-    )
-    qvm.parser.add_argument(
-        '--mem',
-        nargs=1,
-        help=
-        'Specify the initial memory size of the VM'
-    )
-    qvm.parser.add_argument(
-        '--root-move-from',
-        nargs=1,
-        help=
-        'Use provided root.img instead of default/empty one (file will be MOVED)'
-    )
-    qvm.parser.add_argument(
-        '--root-copy-from',
-        nargs=1,
-        help=
-        'Use provided root.img instead of default/empty one (file will be COPIED)'
-    )
-    qvm.parser.add_argument('--vcpus', nargs=1, help='VCPUs count')
-    qvm.parser.add_argument('vmname', help='Virtual machine name')
-    args = qvm.parse_args(vmname, *varargs, **kwargs)
 
-    vmclass = 'AppVM'
-    if args.hvm_template:
-        vmclass = 'TemplateVM'
-    elif args.standalone:
-        vmclass = 'StandaloneVM'
-    elif args.klass:
-        vmclass = args.klass[0]
+    options = [vmname]
 
-    properties = {}
-    if args.mem:
-        properties['memory'] = args.mem[0]
-    if args.vcpus:
-        properties['vcpus'] = args.vcpus[0]
-    if args.hvm:
-        properties['virt_mode'] = 'hvm'
-    if args.proxy or args.net:
-        properties['provides_network'] = 'True'
-    if args.net:
-        properties['netvm'] = ''
+    for key in kwargs:
+        if key == 'mem':
+            # For backwards compatibility
+            options.append('--property={}={}'.format(
+                'memory', kwargs[key]))
+        elif key == 'vcpus':
+            # For backwards compatibility
+            options.append('--property={}={}'.format(
+                'vcpus', kwargs[key]))
+        elif key == 'properties':
+            for prop in kwargs[key]:
+                for property_name in prop:
+                    options.append('--property={}={}'.format(
+                        property_name, prop[property_name]))
+        elif key == 'flags':
+            for flag in kwargs[key]:
+                if flag == 'proxy':
+                    # For backwards compatibility
+                    options.append('--property={}={}'.format(
+                        'provides_network', 'True'))
+                elif flag == 'hvm':
+                    # For backwards compatibility
+                    options.append('--property={}={}'.format(
+                        'virt_mode', 'hvm'))
+                elif flag == 'hvm-template':
+                    # For backwards compatibility
+                    options.append('--class=TemplateVM')
+                elif flag == 'net':
+                    # For backwards compatibility
+                    options.append('--property={}={}'.format(
+                        'provides_network', 'True'))
+                    options.append('--property={}={}'.format(
+                        'netvm', ''))
+                elif flag == 'standalone':
+                    # For backwards compatibility
+                    options.append('--class=StandaloneVM')
+                else:
+                    options.append('--{}'.format(flag))
+        else:
+            options.append('--{}={}'.format(key, kwargs[key]))
 
-    options = ['--class=' + vmclass]
-    if args.root_move_from:
-        options.append('--root-move-from=' + args.root_move_from[0])
-    if args.root_copy_from:
-        options.append('--root-copy-from=' + args.root_copy_from[0])
-    if args.template:
-        options.append('--template=' + args.template[0])
-    if args.label:
-        options.append('--label=' + args.label[0])
-
-    for name, value in properties.items():
-        options.append('--property=' + name + '=' + value)
+    cmd = '/usr/bin/qvm-create {}'.format(' '.join(options))
 
     # pylint: disable=W0613
     def missing_post_hook(cmd, status, data):
@@ -454,7 +402,7 @@ def create(vmname, *varargs, **kwargs):
 
     # Confirm VM is missing
     missing_status = check(
-        args.vmname, *['missing'], **{
+        vmname, *['missing'], **{
             'run-post-hook': missing_post_hook
         }
     )
@@ -463,8 +411,10 @@ def create(vmname, *varargs, **kwargs):
         return qvm.status()
 
     # Execute command (will not execute in test mode)
-    cmd = '/usr/bin/qvm-create {} {}'.format(args.vmname, ' '.join(options))  # pylint: disable=W0212
-    status = qvm.run(cmd)  # pylint: disable=W0612
+    status = qvm.run(cmd)
+
+    # Confirm VM has been created
+    qvm.save_status(check(vmname, *['exists']))
 
     # Returns the status 'data' dictionary
     return qvm.status()
