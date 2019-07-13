@@ -764,10 +764,10 @@ def prefs(vmname, *varargs, **kwargs):
     properties.add_argument('--default-user', '--default_user', nargs=1)
     properties.add_argument('--default-dispvm', '--default_dispvm', nargs=1)
     properties.add_argument(
-            '--template-for-dispvms',
-            '--template_for_dispvms',
-            '--dispvm-allowed',
-            nargs=1, type=bool)
+        '--template-for-dispvms',
+        '--template_for_dispvms',
+        '--dispvm-allowed',
+        nargs=1, type=bool)
     properties.add_argument('--virt-mode', '--virt_mode', nargs=1)
     properties.add_argument(
         '--label',
@@ -806,7 +806,7 @@ def prefs(vmname, *varargs, **kwargs):
     )
     properties.add_argument('--pcidevs', nargs='*', default=[])
     properties.add_argument('--provides-network', nargs=1, type=bool,
-            default=False)
+                            default=False)
     properties.add_argument('--template', nargs=1)
     properties.add_argument(
         '--qrexec-timeout',
@@ -862,10 +862,10 @@ def prefs(vmname, *varargs, **kwargs):
 
         if dest == 'pcidevs':
             value_current = [str(dev.ident).replace('_', ':') for dev
-                in args.vm.devices['pci'].attached()]
+                             in args.vm.devices['pci'].attached()]
         elif dest == 'pci_strictreset':
             value_current = all(not assignment.options.get('no-strict-reset', False)
-                    for assignment in args.vm.devices['pci'].assignments(True))
+                                for assignment in args.vm.devices['pci'].assignments(True))
         elif args.vm.property_is_default(dest):
             value_current = '*default*'
         else:
@@ -938,6 +938,195 @@ def prefs(vmname, *varargs, **kwargs):
             changed = True
 
     # Returns the status 'data' dictionary
+    return qvm.status()
+
+
+def devices(vmname, *varargs, **kwargs):
+    """
+    Manage a virtual machine domain devices::
+
+    Valid actions:
+
+    .. code-block:: yaml
+
+        # Required Positional
+        - name:                 <vmname>
+        - action:               [list|attach|detach]
+        - devices:             [string,]
+
+    Example:
+
+    .. code-block:: yaml
+
+        # List
+        test-vm-1:  # (test-vm-1 is the VM name)
+          qvm.devices:
+            - list: []
+
+        test-vm-2:
+          qvm.devices: []
+
+        some-label-that-is-not-the-vm-name:
+          qvm.devices:
+            - name: test-vm-3
+
+        # Attach, detach
+        test-vm-4:
+          qvm.features:
+            - attach:
+              - pci:dom0:01_00.0: []
+              - pci:dom0:02_00.0:
+                - pci_strictreset: false
+              - bridge:sys-net-interfaces:br0:
+                - ip: 192.168.0.1
+                - netmask: 255.255.255.0
+            - detach:
+              - pci:dom0:28_00.3: []
+              - bridge:sys-net-interfaces:br1: []
+    """
+
+    # CLI 'qubesctl qvm.devices <vm_name> (attach|detach) device [device...]'
+    if varargs and varargs[0] in ['attach', 'detach']:
+        devices = []
+        for device in varargs[1:]:
+            device_type, backend, dev_id = device.split(':')
+            devices.append({'device_type': device_type, 'backend': backend, 'dev_id': dev_id})
+        if devices:
+            kwargs[varargs[0]] = devices
+
+    # Convert kwargs to string for argparse
+    for action in ['attach', 'detach']:
+        if action in kwargs:
+            kwargs[action] = json.dumps(kwargs[action])
+
+    # Set default status-mode to show all status entries
+    kwargs.setdefault('status-mode', 'all')
+
+    qvm = _QVMBase('qvm.devices', **kwargs)
+    qvm.parser.add_argument(
+        'vmname',
+        action=_VMAction,
+        help='Virtual machine name'
+    )
+    qvm.parser.add_argument('--list', nargs='*', help='List devices')
+    qvm.parser.add_argument(
+        '--attach',
+        nargs='*',
+        default=[],
+        help='List of devices to attach'
+    )
+    qvm.parser.add_argument(
+        '--detach',
+        nargs='*',
+        default=[],
+        help='List of devices to detach'
+    )
+
+    args = qvm.parse_args(vmname, *varargs, **kwargs)
+
+    current_devices = []
+    for device_type in ['pci', 'bridge']:
+        for device in args.vm.devices[device_type].assignments():
+            current_devices.append(
+                {'device_type': device_type, 'backend': device.backend_domain.name, 'dev_id': device.ident,
+                 'options': device.options})
+
+    # Return all current devices if a 'list' only was selected
+    if args.list is not None or not (args.attach or args.detach):
+        message = []
+        for device in current_devices:
+            msg_options = '(' + ', '.join('{}={}'.format(key, value) for key, value in device['options'].items()) + ')'
+            message.append(
+                '    ' + device['device_type'] + ':' + device['backend'] + ':' + device['dev_id'] + ' ' + msg_options)
+
+        return {'result': True, 'comment': '[ATTACHED]:\n' + '\n'.join(message)}
+
+    # Helping function for parsing devices in args.attach and args.detach
+    def parse_device(raw_dev):
+        """
+        Example:
+            args.attach = [{u'bridge:sys-bridge:bridge0': [{u'ip': u'192.168.0.1'}, {u'netmask': u'255.255.255.0'}]}]
+        """
+        inline_dev = list(raw_dev.keys())[0]
+        device = {'device_type': inline_dev.split(':')[0], 'backend': inline_dev.split(':')[1],
+                  'dev_id': inline_dev.split(':')[2], 'options': {}}
+        for opt in raw_dev[inline_dev]:
+            device['options'].update(opt)
+
+        return device
+
+    # post-process argparse 'attach' and 'detach' values converted from string
+    if args.attach:
+        args.attach = [parse_device(raw_dev) for raw_dev in json.loads(args.attach[0])]
+
+    if args.detach:
+        args.detach = [parse_device(raw_dev) for raw_dev in json.loads(args.detach[0])]
+
+    for device in args.attach:
+        device_type = device['device_type']
+
+        if device['options'].get('pci_strictreset', False):
+            device['options']['no-strict-reset'] = not device['options']['pci_strictreset']
+            del device['options']['pci_strictreset']
+
+        message_old = None
+        for a in args.vm.devices[device_type].assignments():
+            if a.ident == device['dev_id']:
+                current_assignment = a
+
+                if current_assignment.options.get('no-strict-reset', False) != device['options'].get('no-strict-reset',
+                                                                                                     False):
+                    # detach and attach again to adjust options
+                    # args.vm.devices[device_type].update_persistent(a, False)
+                    args.vm.devices[device_type].detach(current_assignment)
+                    msg_options = '(' + ', '.join(
+                        '{}={}'.format(key, value) for key, value in current_assignment.options.items()) + ')'
+                    message_old = '[ATTACHED] ' + msg_options
+                break
+
+        try:
+            if device_type == 'pci' and ('no-strict-reset' not in device['options']):
+                device['options']['no-strict-reset'] = True
+
+            assignment = qubesadmin.devices.DeviceAssignment(
+                backend_domain=args.vm.app.domains[device['backend']],
+                ident=device['dev_id'],
+                options=device['options'],
+                persistent=True)
+
+            args.vm.devices[device_type].attach(assignment)
+
+            msg_options = '(' + ', '.join('{}={}'.format(key, value) for key, value in device['options'].items()) + ')'
+            message_new = '[ATTACHED] ' + msg_options
+
+            device_name = device['device_type'] + ':' + device['backend'] + ':' + device['dev_id']
+            status = qvm.save_status(retcode=0)
+            status.changes.setdefault(device_name, {})
+            status.changes[device_name]['old'] = message_old
+            status.changes[device_name]['new'] = message_new
+
+        except qubesadmin.exc.DeviceAlreadyAttached:
+            continue
+
+    for device in args.detach:
+        device_type = device['device_type']
+        for a in args.vm.devices[device_type].assignments():
+            if a.ident == device['dev_id']:
+                # args.vm.devices[device_type].update_persistent(a, False)
+                args.vm.devices[device_type].detach(a)
+
+                break
+
+        msg_options = '(' + ', '.join('{}={}'.format(key, value) for key, value in device['options'].items()) + ')'
+        message_old = '[ATTACHED] ' + msg_options
+        message_new = '[DETACHED]'
+
+        device_name = device['device_type'] + ':' + device['backend'] + ':' + device['dev_id']
+        status = qvm.save_status(retcode=0)
+        status.changes.setdefault(device_name, {})
+        status.changes[device_name]['old'] = message_old
+        status.changes[device_name]['new'] = message_new
+
     return qvm.status()
 
 
@@ -1069,11 +1258,11 @@ def service(vmname, *varargs, **kwargs):
 
     args = qvm.parse_args(vmname, *varargs, **kwargs)
     current_services = dict([(k[len('service.'):], v) for k, v
-            in args.vm.features.items() if k.startswith('service.')])
+                             in args.vm.features.items() if k.startswith('service.')])
 
     # Return all current services if a 'list' only was selected
     if args.list is not None or not (
-        args.enable or args.disable or args.default
+            args.enable or args.disable or args.default
     ):
         for service_name, value in current_services.items():
             if value:
@@ -1209,7 +1398,7 @@ def features(vmname, *varargs, **kwargs):
             kwargs[varargs[0]] = features
     elif varargs and varargs[0] in ['set']:
         features = {}
-        for feature in  varargs[1:]:
+        for feature in varargs[1:]:
             feature_name, feature_value = feature.split('=', 1)
             features[feature_name] = feature_value
         if features:
@@ -1291,7 +1480,7 @@ def features(vmname, *varargs, **kwargs):
 
     # Return all current features if a 'list' only was selected
     if args.list is not None or not (
-        args.enable or args.disable or args.default or args.set
+            args.enable or args.disable or args.default or args.set
     ):
         for feature_name, value in current_features.items():
             message = feature_name
@@ -1485,8 +1674,8 @@ def tags(vmname, *varargs, **kwargs):
         status.changes['new'] = list(sorted(new_tags))
     else:
         qvm.save_status(prefix='[SKIP] ',
-            message='All requested tags already set: ' +
-            ','.join(sorted(current_tags)))
+                        message='All requested tags already set: ' +
+                                ','.join(sorted(current_tags)))
 
     # Returns the status 'data' dictionary
     return qvm.status()
@@ -1681,7 +1870,7 @@ def start(vmname, *varargs, **kwargs):
     qvm.parser.add_argument(
         '--drive',
         help="Temporarily attach specified drive as CD/DVD or hard disk "
-        "(can be specified with prefix 'hd:' or 'cdrom:', default is cdrom)"
+             "(can be specified with prefix 'hd:' or 'cdrom:', default is cdrom)"
     )
     qvm.parser.add_argument(
         '--hddisk',

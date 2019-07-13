@@ -72,7 +72,7 @@ States and functions to implement (qvm-commands):
 [ ] qvm-trim-template
 [ ] qvm-usb
 
-''' # pylint:disable=protected-access
+'''  # pylint:disable=protected-access
 
 # Import python libs
 from __future__ import absolute_import
@@ -88,15 +88,19 @@ from salt.utils.odict import OrderedDict as _OrderedDict
 import qubes_utils  # pylint: disable=F0401
 from qubes_utils import Status  # pylint: disable=F0401
 
-log = logging.getLogger(__name__) # pylint:disable=invalid-name
+log = logging.getLogger(__name__)  # pylint:disable=invalid-name
 
 # Define the module's virtual name
 __virtualname__ = 'qvm'
 
-try: __opts__                   # pylint: disable=multiple-statements
-except NameError: __opts__ = {} # pylint: disable=multiple-statements
-try: __salt__                   # pylint: disable=multiple-statements
-except NameError: __salt__ = {} # pylint: disable=multiple-statements
+try:
+    __opts__  # pylint: disable=multiple-statements
+except NameError:
+    __opts__ = {}  # pylint: disable=multiple-statements
+try:
+    __salt__  # pylint: disable=multiple-statements
+except NameError:
+    __salt__ = {}  # pylint: disable=multiple-statements
 
 
 def __virtual__():
@@ -296,6 +300,13 @@ def prefs(name, *varargs, **kwargs):
     return _state_action('qvm.prefs', name, *varargs, **kwargs)
 
 
+def devices(name, *varargs, **kwargs):
+    '''
+    Manage vmname devices (qvm-devices).
+    '''
+    return _state_action('qvm.devices', name, *varargs, **kwargs)
+
+
 def service(name, *varargs, **kwargs):
     '''
     Manage vmname service (qvm-service). In Qubes 4.0 stored as features.
@@ -347,6 +358,7 @@ def vm(name, *varargs, **kwargs):
 
         run
     '''
+
     def get_action(action):
         '''
         Separate the action from action value.
@@ -365,6 +377,7 @@ def vm(name, *varargs, **kwargs):
         'present',
         'clone',
         'prefs',
+        'devices',
         'service',
         'features',
         'tags',
