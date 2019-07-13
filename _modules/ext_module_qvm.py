@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # vim: set ts=4 sw=4 sts=4 et :
-'''
+"""
 :maintainer:    Jason Mehring <nrgaway@gmail.com>
 :maturity:      new
 :platform:      all
@@ -17,7 +17,7 @@ The following errors are used and raised in the circumstances as indicated:
 
     CommandExecutionError
         raise when error executing command
-'''
+"""
 
 # pylint: disable=E1101,E1103
 
@@ -51,16 +51,16 @@ def __virtual__():
 
 
 def _vm():
-    '''
+    """
     Get Qubes VM object from qvm.collection.
-    '''
+    """
     _vm = Null
 
     @property
     def vm(self):  # pylint: disable=C0103
-        '''
+        """
         Return VM object.
-        '''
+        """
         if not self._vm:  # pylint: disable=W0212
             raise SaltInvocationError(
                 message='Virtual Machine does not exist!'
@@ -69,9 +69,9 @@ def _vm():
 
     @vm.setter
     def vm(self, value):  # pylint: disable=C0103
-        '''
+        """
         Get Qubes VM object from qvm.collection and set it here.
-        '''
+        """
         if value:
             app = qubesadmin.Qubes()
             try:
@@ -84,9 +84,9 @@ def _vm():
 
 # pylint: disable=R0903
 class _Namespace(argparse.Namespace):
-    '''
+    """
     Re-purpose argparse's Namespace object to hold data for qvm base module.
-    '''
+    """
 
     vm = _vm()  # pylint: disable=C0103
 
@@ -96,13 +96,13 @@ class _Namespace(argparse.Namespace):
 
 # pylint: disable=R0903
 class _VMAction(argparse.Action):
-    '''
+    """
     Custom action to retrieve virtual machine settings object.
-    '''
+    """
 
     def __call__(self, parser, namespace, values, options_string=None):
-        '''
-        '''
+        """
+        """
         if not values:
             return None
 
@@ -112,9 +112,9 @@ class _VMAction(argparse.Action):
 
 # pylint: disable=R0903
 class _QVMBase(_ModuleBase):
-    '''
+    """
     Overrides.
-    '''
+    """
 
     # pylint: disable=E1002
     def __init__(self, __virtualname, *varargs, **kwargs):
@@ -132,9 +132,9 @@ class _QVMBase(_ModuleBase):
 
 
 def is_halted(qvm, prefix=None, message=None, error_message=None):
-    '''
+    """
     Check VM power state.
-    '''
+    """
     try:
         halted_status = state(qvm.args.vm.name, *['halted'])
 
@@ -153,9 +153,9 @@ def is_halted(qvm, prefix=None, message=None, error_message=None):
 
 
 def is_running(qvm, prefix=None, message=None, error_message=None):
-    '''
+    """
     Check if VM is running.
-    '''
+    """
     running_status = state(qvm.args.vm.name, *['running'])
 
     qvm.save_status(
@@ -169,9 +169,9 @@ def is_running(qvm, prefix=None, message=None, error_message=None):
 
 
 def is_paused(qvm, prefix=None, message=None, error_message=None):
-    '''
+    """
     Check if VM is in a paused state.
-    '''
+    """
     paused_status = state(qvm.args.vm.name, *['paused'])
 
     qvm.save_status(
@@ -185,7 +185,7 @@ def is_paused(qvm, prefix=None, message=None, error_message=None):
 
 
 def check(vmname, *varargs, **kwargs):
-    '''
+    """
     Check if a virtual machine exists::
 
     CLI Example:
@@ -207,7 +207,7 @@ def check(vmname, *varargs, **kwargs):
         # Optional Flags
         - flags:
           - quiet
-    '''
+    """
     # Hide 'check' flag from argv as its not a valid qvm.check option
     qvm = _QVMBase('qvm.check', **kwargs)
     qvm.argparser.options['hide'] = ['check']
@@ -229,9 +229,9 @@ def check(vmname, *varargs, **kwargs):
 
     # pylint: disable=W0613
     def run_post(cmd, status, data):
-        '''
+        """
         Called by run to allow additional post-processing of status.
-        '''
+        """
         if args.check.lower() == 'missing':
             status.retcode = not status.retcode
 
@@ -250,7 +250,7 @@ def check(vmname, *varargs, **kwargs):
 
 
 def state(vmname, *varargs, **kwargs):
-    '''
+    """
     Return virtual machine state::
 
     CLI Example:
@@ -268,7 +268,7 @@ def state(vmname, *varargs, **kwargs):
 
         # Optional Positional
         - state:                (status)|running|halted|transient|paused
-    '''
+    """
     qvm = _QVMBase('qvm.state', **kwargs)
     qvm.parser.add_argument(
         'vmname',
@@ -310,7 +310,7 @@ def state(vmname, *varargs, **kwargs):
 
 
 def create(vmname, *varargs, **kwargs):
-    '''
+    """
     Create a new virtual machine::
 
     CLI Example:
@@ -343,7 +343,7 @@ def create(vmname, *varargs, **kwargs):
           - net
           - standalone
           - quiet
-    '''
+    """
     qvm = _QVMBase('qvm.create', **kwargs)
     qvm.parser.add_argument('--quiet', action='store_true', help='Quiet')
     qvm.parser.add_argument(
@@ -446,9 +446,9 @@ def create(vmname, *varargs, **kwargs):
 
     # pylint: disable=W0613
     def missing_post_hook(cmd, status, data):
-        '''
+        """
         Post-run hook called after `check` for missing status.
-        '''
+        """
         if status.retcode:
             status.result = status.retcode
 
@@ -471,7 +471,7 @@ def create(vmname, *varargs, **kwargs):
 
 
 def remove(vmname, *varargs, **kwargs):
-    '''
+    """
     Remove an existing virtual machine::
 
     CLI Example:
@@ -492,7 +492,7 @@ def remove(vmname, *varargs, **kwargs):
           - just-db:
           - force-root
           - quiet
-    '''
+    """
     # Hide 'shutdown' flag from argv as its not a valid qvm.remove option
     qvm = _QVMBase('qvm.remove', **kwargs)
     qvm.parser.add_argument(
@@ -537,7 +537,7 @@ def remove(vmname, *varargs, **kwargs):
 
 # pylint: disable=W0621
 def clone(vmname, clone, *varargs, **kwargs):
-    '''
+    """
     Clone a new virtual machine::
 
     CLI Example:
@@ -562,7 +562,7 @@ def clone(vmname, clone, *varargs, **kwargs):
           - shutdown
           - force-root
           - quiet
-    '''
+    """
     qvm = _QVMBase('qvm.clone', **kwargs)
     qvm.parser.add_argument(
         '--shutdown',
@@ -625,7 +625,7 @@ def clone(vmname, clone, *varargs, **kwargs):
 
 
 def prefs(vmname, *varargs, **kwargs):
-    '''
+    """
     Set preferences for a virtual machine domain::
 
     CLI Example:
@@ -709,7 +709,7 @@ def prefs(vmname, *varargs, **kwargs):
           qvm.prefs:
             - memory: 400
             - maxmem: 4000
-    '''
+    """
     # Also allow CLI qubesctl qvm.prefs <vm_name> memory maxmem
     if varargs:
         properties = []
@@ -942,7 +942,7 @@ def prefs(vmname, *varargs, **kwargs):
 
 
 def service(vmname, *varargs, **kwargs):
-    '''
+    """
     Manage a virtual machine domain services::
 
     CLI Example:
@@ -1004,7 +1004,7 @@ def service(vmname, *varargs, **kwargs):
             - default:
               - service5
               - service6
-    '''
+    """
     # Also allow CLI qubesctl qvm.service <vm_name> (enable|disable|default) service [service...]
     if varargs and varargs[0] in ['enable', 'disable', 'defualt']:
         services = []
@@ -1044,18 +1044,18 @@ def service(vmname, *varargs, **kwargs):
 
     # pylint: disable=W0613
     def run_post(cmd, status, data):
-        '''
+        """
         Called by run to allow additional post-processing of status.
-        '''
+        """
         if status.passed():
             status.changes.setdefault(data['key'], {})
             status.changes[data['key']]['old'] = data['value_old']
             status.changes[data['key']]['new'] = data['value_new']
 
     def label(value):
-        '''
+        """
         Return a mapped service label.
-        '''
+        """
         if value == '1':
             return 'Enabled'
         elif value == '':
@@ -1130,7 +1130,7 @@ def service(vmname, *varargs, **kwargs):
 
 
 def features(vmname, *varargs, **kwargs):
-    '''
+    """
     Manage a virtual machine domain features::
 
     CLI Example:
@@ -1199,7 +1199,7 @@ def features(vmname, *varargs, **kwargs):
             - set:
               - bridge_name: br0
 
-    '''
+    """
     # Also allow CLI qubesctl qvm.features <vm_name> (enable|disable|default) feature [feature...]
     if varargs and varargs[0] in ['enable', 'disable', 'default']:
         features = []
@@ -1259,18 +1259,18 @@ def features(vmname, *varargs, **kwargs):
 
     # pylint: disable=W0613
     def run_post(cmd, status, data):
-        '''
+        """
         Called by run to allow additional post-processing of status.
-        '''
+        """
         if status.passed():
             status.changes.setdefault(data['key'], {})
             status.changes[data['key']]['old'] = data['value_old']
             status.changes[data['key']]['new'] = data['value_new']
 
     def label(value):
-        '''
+        """
         Return a mapped service label.
-        '''
+        """
         if value == '1':
             return 'Enabled'
         elif value == '':
@@ -1356,7 +1356,7 @@ def features(vmname, *varargs, **kwargs):
 
 
 def tags(vmname, *varargs, **kwargs):
-    '''
+    """
     Manage a virtual machine domain tags::
 
     CLI Example:
@@ -1414,7 +1414,7 @@ def tags(vmname, *varargs, **kwargs):
               - tag3
               - tag4
 
-    '''
+    """
     # Also allow CLI qubesctl qvm.tags <vm_name> (add|del) tag [tag...]
     if varargs and varargs[0] in ['add', 'del', 'present', 'absent']:
         tags = []
@@ -1493,7 +1493,7 @@ def tags(vmname, *varargs, **kwargs):
 
 
 def run(vmname, *varargs, **kwargs):
-    '''
+    """
     Run an application within a virtual machine domain::
 
     CLI Example:
@@ -1529,7 +1529,7 @@ def run(vmname, *varargs, **kwargs):
           - filter-escape-chars
           - no-filter-escape-chars
           - no-color-output
-    '''
+    """
     qvm = _QVMBase('qvm.run', **kwargs)
     qvm.parser.add_argument('--quiet', action='store_true', help='Quiet')
     qvm.parser.add_argument(
@@ -1638,7 +1638,7 @@ def run(vmname, *varargs, **kwargs):
 
 
 def start(vmname, *varargs, **kwargs):
-    '''
+    """
     Start a virtual machine domain::
 
     CLI Example:
@@ -1665,7 +1665,7 @@ def start(vmname, *varargs, **kwargs):
           - quiet
           - debug
           - install-windows-tools
-    '''
+    """
     qvm = _QVMBase('qvm.start', **kwargs)
     qvm.parser.add_argument('--quiet', action='store_true', help='Quiet')
     qvm.parser.add_argument(
@@ -1703,9 +1703,9 @@ def start(vmname, *varargs, **kwargs):
     args = qvm.parse_args(vmname, *varargs, **kwargs)
 
     def start_guid():
-        '''
+        """
         Prevent startup status showing as `Transient`.
-        '''
+        """
         try:
             if not args.vm.is_guid_running():
                 args.vm.start_guid()
@@ -1714,9 +1714,9 @@ def start(vmname, *varargs, **kwargs):
             pass
 
     def is_transient():
-        '''
+        """
         Start guid if VM is `transient`.
-        '''
+        """
         transient_status = state(args.vmname, *['transient'])
         if transient_status.passed():
             if __opts__['test']:
@@ -1766,7 +1766,7 @@ def start(vmname, *varargs, **kwargs):
 
 
 def shutdown(vmname, *varargs, **kwargs):
-    '''
+    """
     Shutdown a virtual machine domain::
 
     CLI Example:
@@ -1791,7 +1791,7 @@ def shutdown(vmname, *varargs, **kwargs):
           - wait
           - all
           - kill
-    '''
+    """
     qvm = _QVMBase('qvm.shutdown', **kwargs)
     qvm.parser.add_argument(
         '--quiet',
@@ -1836,9 +1836,9 @@ def shutdown(vmname, *varargs, **kwargs):
     args = qvm.parse_args(vmname, *varargs, **kwargs)
 
     def is_transient():
-        '''
+        """
         Kill if transient and `force` option enabled.
-        '''
+        """
         transient_status = state(args.vmname, *['transient'])
         if transient_status.passed():
             if __opts__['test']:
@@ -1911,7 +1911,7 @@ def shutdown(vmname, *varargs, **kwargs):
 
 
 def kill(vmname, *varargs, **kwargs):
-    '''
+    """
     Kill a virtual machine domain::
 
     CLI Example:
@@ -1926,7 +1926,7 @@ def kill(vmname, *varargs, **kwargs):
 
         # Required Positional
         - name:                 <vmname>
-    '''
+    """
     qvm = _QVMBase('qvm.kill', **kwargs)
     qvm.parser.add_argument(
         'vmname',
@@ -1947,7 +1947,7 @@ def kill(vmname, *varargs, **kwargs):
 
 
 def pause(vmname, *varargs, **kwargs):
-    '''
+    """
     Pause a virtual machine::
 
     CLI Example:
@@ -1962,7 +1962,7 @@ def pause(vmname, *varargs, **kwargs):
 
         # Required Positional
         - name:                 <vmname>
-    '''
+    """
     qvm = _QVMBase('qvm.pause', **kwargs)
     qvm.parser.add_argument(
         'vmname',
@@ -1993,7 +1993,7 @@ def pause(vmname, *varargs, **kwargs):
 
 
 def unpause(vmname, *varargs, **kwargs):
-    '''
+    """
     Unpause a virtual machine::
 
     CLI Example:
@@ -2008,7 +2008,7 @@ def unpause(vmname, *varargs, **kwargs):
 
         # Required Positional
         - name:                 <vmname>
-    '''
+    """
     qvm = _QVMBase('qvm.unpause', **kwargs)
     qvm.parser.add_argument(
         'vmname',
