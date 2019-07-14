@@ -1025,7 +1025,7 @@ def devices(vmname, *varargs, **kwargs):
     args = qvm.parse_args(vmname, *varargs, **kwargs)
 
     current_devices = []
-    for device_type in ['pci', 'bridge']:
+    for device_type in ['pci', 'block', 'usb', 'bridge', 'mic']:
         for device in args.vm.devices[device_type].assignments():
             current_devices.append(
                 {'device_type': device_type, 'backend': device.backend_domain.name, 'dev_id': device.ident,
