@@ -1047,11 +1047,20 @@ def devices(vmname, *varargs, **kwargs):
         Example:
             args.attach = [{u'bridge:sys-bridge:bridge0': [{u'ip': u'192.168.0.1'}, {u'netmask': u'255.255.255.0'}]}]
         """
+        device = None
+
         inline_dev = list(raw_dev.keys())[0]
-        device = {'device_type': inline_dev.split(':')[0], 'backend': inline_dev.split(':')[1],
-                  'dev_id': inline_dev.split(':')[2], 'options': {}}
-        for opt in raw_dev[inline_dev]:
-            device['options'].update(opt)
+        inline_dev_split = inline_dev.split(':')
+
+        if len(inline_dev_split) == 3:
+            device = {'device_type': inline_dev_split[0], 'backend': inline_dev_split[1],
+                      'dev_id': inline_dev_split[2], 'options': {}}
+            for opt in raw_dev[inline_dev]:
+                device['options'].update(opt)
+        else:
+            raise SaltInvocationError(
+                message="Missing either 'device_type', 'backend' or 'dev_id' in '%s'" % inline_dev
+            )
 
         return device
 
