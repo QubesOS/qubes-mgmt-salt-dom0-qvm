@@ -1116,16 +1116,22 @@ def devices(vmname, *varargs, **kwargs):
 
     for device in args.detach:
         device_type = device['device_type']
+        current_assignment = None
         for a in args.vm.devices[device_type].assignments():
             if a.ident == device['dev_id']:
+                current_assignment = a
                 # args.vm.devices[device_type].update_persistent(a, False)
                 args.vm.devices[device_type].detach(a)
-
                 break
 
-        msg_options = '(' + ', '.join('{}={}'.format(key, value) for key, value in device['options'].items()) + ')'
-        message_old = '[ATTACHED] ' + msg_options
-        message_new = '[DETACHED]'
+        if current_assignment:
+            msg_options = '(' + ', '.join(
+                '{}={}'.format(key, value) for key, value in current_assignment.options.items()) + ')'
+            message_old = '[ATTACHED] ' + msg_options
+            message_new = '[DETACHED]'
+        else:
+            message_old = None
+            message_new = '[SKIP]    : Device already detached'
 
         device_name = device['device_type'] + ':' + device['backend'] + ':' + device['dev_id']
         status = qvm.save_status(retcode=0)
