@@ -1094,9 +1094,6 @@ def devices(vmname, *varargs, **kwargs):
                 break
 
         try:
-            if device_type == 'pci' and ('no-strict-reset' not in device['options']):
-                device['options']['no-strict-reset'] = True
-
             assignment = qubesadmin.devices.DeviceAssignment(
                 backend_domain=args.vm.app.domains[device['backend']],
                 ident=device['dev_id'],
