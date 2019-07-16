@@ -1110,34 +1110,29 @@ def devices(vmname, *varargs, **kwargs):
             status.changes.setdefault(device_name, {})
             status.changes[device_name]['old'] = message_old
             status.changes[device_name]['new'] = message_new
-
-        except qubesadmin.exc.DeviceAlreadyAttached:
-            continue
+        except qubesadmin.exc.QubesException as e:
+            qvm.save_status(retcode=1, message=str(e))
 
     for device in args.detach:
         device_type = device['device_type']
-        current_assignment = None
-        for a in args.vm.devices[device_type].assignments():
-            if a.ident == device['dev_id']:
-                current_assignment = a
-                # args.vm.devices[device_type].update_persistent(a, False)
-                args.vm.devices[device_type].detach(a)
-                break
 
-        if current_assignment:
-            msg_options = '(' + ', '.join(
-                '{}={}'.format(key, value) for key, value in current_assignment.options.items()) + ')'
-            message_old = '[ATTACHED] ' + msg_options
+        try:
+            assignment = qubesadmin.devices.DeviceAssignment(
+                backend_domain=args.vm.app.domains[device['backend']],
+                ident=device['dev_id'])
+
+            args.vm.devices[device_type].detach(assignment)
+
+            message_old = '[ATTACHED]'
             message_new = '[DETACHED]'
-        else:
-            message_old = None
-            message_new = '[SKIP]    : Device already detached'
 
-        device_name = device['device_type'] + ':' + device['backend'] + ':' + device['dev_id']
-        status = qvm.save_status(retcode=0)
-        status.changes.setdefault(device_name, {})
-        status.changes[device_name]['old'] = message_old
-        status.changes[device_name]['new'] = message_new
+            device_name = device['device_type'] + ':' + device['backend'] + ':' + device['dev_id']
+            status = qvm.save_status(retcode=0)
+            status.changes.setdefault(device_name, {})
+            status.changes[device_name]['old'] = message_old
+            status.changes[device_name]['new'] = message_new
+        except qubesadmin.exc.QubesException as e:
+            qvm.save_status(retcode=1, message=str(e))
 
     return qvm.status()
 
