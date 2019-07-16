@@ -1083,8 +1083,7 @@ def devices(vmname, *varargs, **kwargs):
             if a.ident == device['dev_id']:
                 current_assignment = a
 
-                if current_assignment.options.get('no-strict-reset', False) != device['options'].get('no-strict-reset',
-                                                                                                     False):
+                if current_assignment.options != device['options']:
                     # detach and attach again to adjust options
                     # args.vm.devices[device_type].update_persistent(a, False)
                     args.vm.devices[device_type].detach(current_assignment)
