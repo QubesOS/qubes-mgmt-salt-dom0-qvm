@@ -972,7 +972,7 @@ def devices(vmname, *varargs, **kwargs):
 
         # Attach, detach
         test-vm-4:
-          qvm.features:
+          qvm.devices:
             - attach:
               - pci:dom0:01_00.0: []
               - pci:dom0:02_00.0:
@@ -1025,7 +1025,7 @@ def devices(vmname, *varargs, **kwargs):
     args = qvm.parse_args(vmname, *varargs, **kwargs)
 
     current_devices = []
-    for device_type in ['pci', 'block', 'usb', 'bridge', 'mic']:
+    for device_type in args.vm.devices:
         for device in args.vm.devices[device_type].assignments():
             current_devices.append(
                 {'device_type': device_type, 'backend': device.backend_domain.name, 'dev_id': device.ident,
@@ -1053,8 +1053,8 @@ def devices(vmname, *varargs, **kwargs):
         inline_dev_split = inline_dev.split(':')
 
         if len(inline_dev_split) == 3:
-            device = {'device_type': inline_dev_split[0], 'backend': inline_dev_split[1],
-                      'dev_id': inline_dev_split[2], 'options': {}}
+            device = {'device_type': str(inline_dev_split[0]), 'backend': str(inline_dev_split[1]),
+                      'dev_id': str(inline_dev_split[2]), 'options': {}}
             for opt in raw_dev[inline_dev]:
                 device['options'].update(opt)
         else:
@@ -1074,13 +1074,9 @@ def devices(vmname, *varargs, **kwargs):
     for device in args.attach:
         device_type = device['device_type']
 
-        if device['options'].get('pci_strictreset', False):
-            device['options']['no-strict-reset'] = not device['options']['pci_strictreset']
-            del device['options']['pci_strictreset']
-
         message_old = None
         for a in args.vm.devices[device_type].assignments():
-            if a.ident == device['dev_id']:
+            if a.ident == device['dev_id'] and a.backend_domain == device['backend']:
                 current_assignment = a
 
                 if current_assignment.options != device['options']:
