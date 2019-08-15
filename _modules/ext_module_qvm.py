@@ -1073,40 +1073,45 @@ def devices(vmname, *varargs, **kwargs):
 
     for device in args.attach:
         device_type = device['device_type']
-
+        device_skip = False
         message_old = None
         for a in args.vm.devices[device_type].assignments():
             if a.ident == device['dev_id'] and a.backend_domain == device['backend']:
                 current_assignment = a
-
                 if current_assignment.options != device['options']:
                     # detach and attach again to adjust options
-                    # args.vm.devices[device_type].update_persistent(a, False)
                     args.vm.devices[device_type].detach(current_assignment)
                     msg_options = '(' + ', '.join(
                         '{}={}'.format(key, value) for key, value in current_assignment.options.items()) + ')'
                     message_old = '[ATTACHED] ' + msg_options
+                else:
+                    device_skip = True
                 break
 
-        try:
-            assignment = qubesadmin.devices.DeviceAssignment(
-                backend_domain=args.vm.app.domains[device['backend']],
-                ident=device['dev_id'],
-                options=device['options'],
-                persistent=True)
+        msg_options = '(' + ', '.join('{}={}'.format(key, value) for key, value in device['options'].items()) + ')'
+        if not device_skip:
+            try:
+                assignment = qubesadmin.devices.DeviceAssignment(
+                    backend_domain=args.vm.app.domains[device['backend']],
+                    ident=device['dev_id'],
+                    options=device['options'],
+                    persistent=True)
 
-            args.vm.devices[device_type].attach(assignment)
+                args.vm.devices[device_type].attach(assignment)
+                message_new = '[ATTACHED] ' + msg_options
 
-            msg_options = '(' + ', '.join('{}={}'.format(key, value) for key, value in device['options'].items()) + ')'
-            message_new = '[ATTACHED] ' + msg_options
-
-            device_name = device['device_type'] + ':' + device['backend'] + ':' + device['dev_id']
-            status = qvm.save_status(retcode=0)
-            status.changes.setdefault(device_name, {})
-            status.changes[device_name]['old'] = message_old
-            status.changes[device_name]['new'] = message_new
-        except qubesadmin.exc.QubesException as e:
-            qvm.save_status(retcode=1, message=str(e))
+                device_name = device['device_type'] + ':' + device['backend'] + ':' + device['dev_id']
+                status = qvm.save_status(retcode=0)
+                status.changes.setdefault(device_name, {})
+                status.changes[device_name]['old'] = message_old
+                status.changes[device_name]['new'] = message_new
+            except qubesadmin.exc.QubesException as e:
+                qvm.save_status(retcode=1, message=str(e))
+        else:
+            message = 'Device already attached: {type}:{backend}:{id} '.format(type=device_type,
+                                                                               backend=device['backend'],
+                                                                               id=device['dev_id']) + msg_options
+            qvm.save_status(prefix='[SKIP] ', message=message)
 
     for device in args.detach:
         device_type = device['device_type']
