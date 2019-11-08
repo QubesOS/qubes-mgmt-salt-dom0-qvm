@@ -38,6 +38,7 @@ from nulltype import Null
 
 import qubesadmin
 import qubesadmin.devices
+import qubesadmin.firewall
 
 # Enable logging
 log = logging.getLogger(__name__)
@@ -1687,6 +1688,100 @@ def tags(vmname, *varargs, **kwargs):
                                 ','.join(sorted(current_tags)))
 
     # Returns the status 'data' dictionary
+    return qvm.status()
+
+
+def firewall(vmname, *varargs, **kwargs):
+    """
+    Manage a virtual machine domain firewall::
+
+    CLI example:
+
+    .. code-block:: bash
+
+        qubesctl qvm.firewall <vm-name> [list]
+        qubesctl qvm.firewall <vm-name> set rule1 rule2
+
+        # List
+        qybesctl qvm.firewall sys-net
+
+        # Set.  Note that the `=` is important to prevent SaltStack from
+        # interpreting the rule as a dictionary.
+        qubesctl qvm.firewall <vm_name> set='action=accept'
+
+        # Combined
+        qubesctl qvm.firewall <vm_name> set=['action=accept proto=tcp', 'action=drop']
+
+    Valid actions:
+
+    .. code-block:: yaml
+
+        # Required Positional
+        - name:     <vmname>
+        - action:   [list|set]
+        - rules:    [rule,]
+
+    Example:
+
+    .. code-block:: yaml
+
+        # List
+        test-vm-1:  # (test-vm-1 is the VM name)
+          qvm.firewall:
+            - list: []
+
+        test-vm-2:
+          qvm.firewall: []
+
+        test-vm-3:
+          qvm.firewall:
+            - set:
+              - action=accept dstports=443 proto=tcp
+              - action=drop
+    """
+    qvm = _QVMBase('qvm.firewall', **kwargs)
+    qvm.parser.add_argument(
+        'vmname',
+        action=_VMAction,
+        help='Virtual machine name'
+    )
+    qvm.parser.add_argument(
+        '--list',
+        dest='do_list',
+        nargs='*',
+        help='List rules'
+    )
+    qvm.parser.add_argument(
+        '--set',
+        dest='do_set',
+        nargs='*',
+        default=[],
+        help='List of rules to set'
+    )
+    args = qvm.parse_args(vmname, *varargs, **kwargs)
+    current_rules = args.vm.firewall.rules
+
+    if args.do_list is not None or not args.do_set:
+        for rule in current_rules:
+            qvm.save_status(message=rule.rule)
+        return qvm.status()
+
+    try:
+        new_rules = [qubesadmin.firewall.Rule(r) for r in args.do_set]
+    except (qubesadmin.exc.QubesException, ValueError) as e:
+        status = qvm.save_status(retcode=1, message=str(e))
+        return qvm.status()
+
+    if current_rules != new_rules:
+        if not __opts__['test']:
+            args.vm.firewall.rules = new_rules
+        status = qvm.save_status(retcode=0)
+        status.changes['old'] = '\n'.join(r.rule for r in current_rules)
+        status.changes['new'] = '\n'.join(r.rule for r in new_rules)
+    else:
+        qvm.save_status(prefix='[SKIP] ',
+                        message='All requested rules already set:\n' +
+                                '\n'.join(r.rule for r in current_rules))
     return qvm.status()
 
 

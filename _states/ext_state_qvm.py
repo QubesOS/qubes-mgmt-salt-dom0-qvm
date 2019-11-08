@@ -41,7 +41,7 @@ States and functions to implement (qvm-commands):
 
 [X] qvm-create
 [ ] qvm-create-default-dvm
-[ ] qvm-firewall
+[X] qvm-firewall
 [ ] qvm-grow-private
 [ ] qvm-grow-root
 [ ] qvm-init-storage
@@ -50,7 +50,7 @@ States and functions to implement (qvm-commands):
 
 [X] qvm-create
 [ ] qvm-create-default-dvm
-[ ] qvm-firewall
+[X] qvm-firewall
 [ ] qvm-grow-private
 [ ] qvm-grow-root
 [ ] qvm-init-storage
@@ -328,6 +328,13 @@ def tags(name, *varargs, **kwargs):
     return _state_action('qvm.tags', name, *varargs, **kwargs)
 
 
+def firewall(name, *varargs, **kwargs):
+    '''
+    Manage vmname firewall (qvm-firewall).
+    '''
+    return _state_action('qvm.firewall', name, *varargs, **kwargs)
+
+
 # pylint: disable=W0613,C0103
 def vm(name, *varargs, **kwargs):
     '''
@@ -380,6 +387,7 @@ def vm(name, *varargs, **kwargs):
         'devices',
         'service',
         'features',
+        'firewall',
         'tags',
         'unpause',
         'pause',
