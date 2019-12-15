@@ -10,7 +10,7 @@ Group:     System administration tools
 BuildArch: noarch
 Requires:  qubes-mgmt-salt
 Requires:  qubes-mgmt-salt-dom0
-Requires:  python2-qubesadmin
+Requires:  python3-qubesadmin
 
 
 Source0: %{name}-%{version}.tar.gz
