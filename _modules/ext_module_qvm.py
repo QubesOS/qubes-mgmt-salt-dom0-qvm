@@ -662,6 +662,7 @@ def prefs(vmname, *varargs, **kwargs):
         - default-user:         <string>
         - default-dispvm:       <string>
         - guivm:                <string>
+        - audiovm:              <string>
         - template-for-dispvms: true|false
         - virt-mode:            (hvm|pv)
         - include-in-backups:   true|false
@@ -766,6 +767,7 @@ def prefs(vmname, *varargs, **kwargs):
     properties.add_argument('--default-user', '--default_user', nargs=1)
     properties.add_argument('--default-dispvm', '--default_dispvm', nargs=1)
     properties.add_argument('--guivm', nargs=1)
+    properties.add_argument('--audiovm', nargs=1)
     properties.add_argument(
         '--template-for-dispvms',
         '--template_for_dispvms',
@@ -880,7 +882,7 @@ def prefs(vmname, *varargs, **kwargs):
             continue
 
         value_new = kwargs[key]
-        if key in ('netvm', 'guivm', 'default_dispvm', 'management_dispvm'):
+        if key in ('netvm', 'guivm', 'audiovm', 'default_dispvm', 'management_dispvm'):
             if value_new in ('none', ''):
                 value_new = None
 
