@@ -661,6 +661,7 @@ def prefs(vmname, *varargs, **kwargs):
         - debug:                true|(false)
         - default-user:         <string>
         - default-dispvm:       <string>
+        - management-dispvm:    <string>
         - guivm:                <string>
         - audiovm:              <string>
         - template-for-dispvms: true|false
@@ -766,6 +767,7 @@ def prefs(vmname, *varargs, **kwargs):
     properties.add_argument('--debug', nargs=1, type=bool, default=False)
     properties.add_argument('--default-user', '--default_user', nargs=1)
     properties.add_argument('--default-dispvm', '--default_dispvm', nargs=1)
+    properties.add_argument('--management-dispvm', '--management_dispvm', nargs=1)
     properties.add_argument('--guivm', nargs=1)
     properties.add_argument('--audiovm', nargs=1)
     properties.add_argument(
