@@ -31,8 +31,6 @@ States and functions to implement (qvm-commands):
 [X] Implemented
 [1-9] Next to Implement
 
-[ ] qvm-add-appvm
-[ ] qvm-add-template
 [ ] qvm-backup
 [ ] qvm-backup-restore
 [ ] qvm-block
@@ -40,20 +38,16 @@ States and functions to implement (qvm-commands):
 [X] qvm-clone
 
 [X] qvm-create
-[ ] qvm-create-default-dvm
 [X] qvm-firewall
 [ ] qvm-grow-private
 [ ] qvm-grow-root
-[ ] qvm-init-storage
 [X] qvm-kill
 
 
 [X] qvm-create
-[ ] qvm-create-default-dvm
 [X] qvm-firewall
 [ ] qvm-grow-private
 [ ] qvm-grow-root
-[ ] qvm-init-storage
 [X] qvm-kill
 
 [X] qvm-pause
@@ -68,7 +62,6 @@ States and functions to implement (qvm-commands):
 [X] qvm-start
 [ ] qvm-sync-appmenus
 [ ] qvm-sync-clock
-[ ] qvm-template-commit
 [ ] qvm-trim-template
 [ ] qvm-usb
 
