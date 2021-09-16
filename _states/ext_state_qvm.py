@@ -459,3 +459,44 @@ def vm(name, *varargs, **kwargs):
                 ret['comment'] += status['stderr'].strip()
 
     return ret
+
+
+def template_installed(name, fromrepo=None, pool=None, **kwargs):
+    """
+    Ensures given template is installed
+
+    fromrepo
+        Install from given repository
+
+    pool
+        Install into given storage pool. Will not move already installed template.
+    """
+    ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
+    info = __salt__['qvm.template_info'](name)
+    if info:
+        ret['result'] = True
+        ret['comment'] = 'Template {} version {} already installed'.format(
+                info['name'], info['version'])
+        return ret
+    if __opts__['test']:
+        ret['result'] = None
+        ret['comment'] = 'Template {} would be installed'.format(name)
+        ret['changes'] = {'new': name}
+        return ret
+    try:
+        install_out = __salt__['qvm.template_install'](name, fromrepo=fromrepo, pool=pool)
+    except CommandExecutionError as e:
+        ret['comment'] = str(e)
+        return ret
+
+    info = __salt__['qvm.template_info'](name)
+    if info:
+        ret['result'] = True
+        ret['comment'] = 'Template {} version {} installed'.format(
+                info['name'], info['version']),
+        ret['changes'] = {'new': info, 'details': install_out['info']}
+        return ret
+    else:
+        ret['comment']: 'Template {} install completed, but the template is missing'.format(name)
+        ret['changes'] = {'new': info, 'details': install_out['info']}
+        return ret

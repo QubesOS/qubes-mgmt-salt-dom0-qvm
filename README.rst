@@ -368,6 +368,20 @@ Manage vmname tags.
             # list: []
             # list: [string,]
 
+
+``qvm.template_installed``
+---------------
+
+Ensure given template is installed.
+
+.. code-block:: yaml
+
+    qvm-template-installed:
+        qvm.template_installed:
+            - name: <template name>
+            - fromrepo: <repository name>
+
+
 ``qvm.vm``
 ----------
 

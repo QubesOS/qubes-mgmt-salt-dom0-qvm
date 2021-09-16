@@ -28,7 +28,7 @@ import logging
 import json
 
 # Import salt libs
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import custom libs
 import module_utils  # pylint: disable=F0401
@@ -2337,3 +2337,61 @@ def unpause(vmname, *varargs, **kwargs):
 
     # Returns the status 'data' dictionary
     return qvm.status()
+
+
+def template_info(name, **kwargs):
+    """
+    Get info about installed template
+
+    Returns dict of: 'name', 'version', 'reponame' (if found)
+    or empty dict if not found
+    """
+    info_ret = __salt__['cmd.run_all'](
+            'qvm-template info --installed --machine-readable-json {}'.format(name),
+            ignore_retcode=True)
+    if info_ret['retcode']:
+        # not found
+        return {}
+    # just take the first line:
+    info = json.loads(info_ret['stdout'])
+    assert 'installed' in info
+    assert len(info['installed']) == 1
+    ret = info['installed'][0]
+    return ret
+
+
+def template_install(name, version=None, fromrepo=None, pool=None, **kwargs):
+    """
+    Install a specified template
+
+    name
+        name of the template to install
+
+    version
+        version of the template to install, in form [EPOCH:]VERSION[-RELEASE]
+
+    fromrepo
+        download the template from this specific repo, instead of the system default
+
+    pool
+        install into specific storage pool
+    """
+
+    cmd = 'qvm-template install --quiet'
+    if fromrepo:
+        cmd += ' --repoid={}'.format(fromrepo)
+    if pool:
+        cmd += ' --pool={}'.format(pool)
+    cmd += ' ' + name
+    if version:
+        cmd += '-' + version
+
+    ret = __salt__['cmd.run_all'](cmd)
+    if ret['retcode']:
+        raise CommandExecutionError (
+            message='Failed to install template {}'.format(name),
+            info=ret['stderr']
+        )
+    return {
+        'info': ret['stderr']
+    }
