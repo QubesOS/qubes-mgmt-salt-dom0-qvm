@@ -341,6 +341,9 @@ Manage vmname features.
             - default:
                 - another_test5
                 - does_not_exist
+            - set:
+                - example.key: key value
+                - example.test: test value
             # list: []
             # list: [string,]
 
