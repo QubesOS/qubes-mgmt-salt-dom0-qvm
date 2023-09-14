@@ -858,7 +858,8 @@ def prefs(vmname, *varargs, **kwargs):
                 qvm.save_status(status, message=message)
 
     # compatibility with Qubes 3.x
-    pci_strictreset = kwargs.get('pci_strictreset', True)
+    pci_strictreset = kwargs.get('pci_strictreset', None)
+    current_pci_strictreset = None
 
     changed = False
     for key in selected_properties:
@@ -873,6 +874,7 @@ def prefs(vmname, *varargs, **kwargs):
         elif dest == 'pci_strictreset':
             value_current = all(not assignment.options.get('no-strict-reset', False)
                                 for assignment in args.vm.devices['pci'].assignments(True))
+            current_pci_strictreset = value_current
         elif args.vm.property_is_default(dest):
             value_current = '*default*'
         else:
@@ -889,17 +891,28 @@ def prefs(vmname, *varargs, **kwargs):
                 value_new = None
 
         # Value matches; no need to update
-        if value_current == value_new:
+        if value_current == value_new and (
+                dest != 'pcidevs' or pci_strictreset == current_pci_strictreset):
             message = fmt.format(dest, value_current)
             qvm.save_status(prefix='[SKIP] ', message=message)
             continue
 
+        data = dict(key=dest, value_old=value_current, value_new=value_new)
+
         if dest == 'pci_strictreset':
+            if 'pcidevs' in kwargs:
+                status = qvm.save_status(retcode=0)
+                status.changes.setdefault(data['key'], {})
+                status.changes[data['key']]['old'] = data['value_old']
+                status.changes[data['key']]['new'] = data['value_new']
+            else:
+                message = fmt.format(dest,
+                    "Setting 'pci_strictreset' works only together with 'pcidevs'")
+                qvm.save_status(retcode=1, message=message)
             # "setting" pci_strictreset handled in 'pcidevs' property
             continue
 
         # Execute command (will not execute in test mode)
-        data = dict(key=dest, value_old=value_current, value_new=value_new)
         # pylint: disable=W0212
         if dest == 'pcidevs':
             value_combined = value_current[:]
@@ -910,14 +923,17 @@ def prefs(vmname, *varargs, **kwargs):
                     if a.ident == dev_id_api:
                         current_assignment = a
                 if current_assignment and \
-                        current_assignment.options.get('no-strict-reset', False) != pci_strictreset:
+                        pci_strictreset is not None and \
+                        current_assignment.options.get('no-strict-reset', False) != \
+                            (not pci_strictreset):
                     # detach and attach again to adjust options
                     args.vm.devices['pci'].detach(current_assignment)
+                    value_combined.remove(dev_id)
 
                 try:
                     options = {}
-                    if not pci_strictreset:
-                        options['no-strict-reset'] = True
+                    if pci_strictreset is not None:
+                        options['no-strict-reset'] = not pci_strictreset
                     assignment = qubesadmin.devices.DeviceAssignment(
                         args.vm.app.domains['dom0'],
                         dev_id_api,
