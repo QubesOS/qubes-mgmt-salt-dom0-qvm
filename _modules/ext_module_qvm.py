@@ -870,10 +870,10 @@ def prefs(vmname, *varargs, **kwargs):
 
         if dest == 'pcidevs':
             value_current = [str(dev.ident).replace('_', ':') for dev
-                             in args.vm.devices['pci'].attached()]
+                             in args.vm.devices['pci'].get_assigned_devices(required_only=True)]
         elif dest == 'pci_strictreset':
             value_current = all(not assignment.options.get('no-strict-reset', False)
-                                for assignment in args.vm.devices['pci'].assignments(True))
+                                for assignment in args.vm.devices['pci'].get_assigned_devices(required_only=True))
             current_pci_strictreset = value_current
         elif args.vm.property_is_default(dest):
             value_current = '*default*'
@@ -919,7 +919,7 @@ def prefs(vmname, *varargs, **kwargs):
             for dev_id in value_new:
                 dev_id_api = dev_id.strip().replace(':', '_')
                 current_assignment = None
-                for a in args.vm.devices['pci'].assignments():
+                for a in args.vm.devices['pci'].get_assigned_devices(required_only=True):
                     if a.ident == dev_id_api:
                         current_assignment = a
                 if current_assignment and \
@@ -927,7 +927,7 @@ def prefs(vmname, *varargs, **kwargs):
                         current_assignment.options.get('no-strict-reset', False) != \
                             (not pci_strictreset):
                     # detach and attach again to adjust options
-                    args.vm.devices['pci'].detach(current_assignment)
+                    args.vm.devices['pci'].unassign(current_assignment)
                     value_combined.remove(dev_id)
 
                 try:
@@ -937,9 +937,10 @@ def prefs(vmname, *varargs, **kwargs):
                     assignment = qubesadmin.devices.DeviceAssignment(
                         args.vm.app.domains['dom0'],
                         dev_id_api,
-                        options,
-                        persistent=True)
-                    args.vm.devices['pci'].attach(assignment)
+                        devclass='pci',
+                        attach_automatically=True, required=True,
+                        options=options)
+                    args.vm.devices['pci'].assign(assignment)
                 except qubesadmin.exc.DeviceAlreadyAttached:
                     continue
                 value_combined.append(dev_id)
@@ -1049,7 +1050,7 @@ def devices(vmname, *varargs, **kwargs):
 
     current_devices = []
     for device_type in args.vm.devices:
-        for device in args.vm.devices[device_type].assignments():
+        for device in args.vm.devices[device_type].get_assigned_devices():
             current_devices.append(
                 {'device_type': device_type, 'backend': device.backend_domain.name, 'dev_id': device.ident,
                  'options': device.options})
@@ -1098,12 +1099,12 @@ def devices(vmname, *varargs, **kwargs):
         device_type = device['device_type']
         device_skip = False
         message_old = None
-        for a in args.vm.devices[device_type].assignments():
+        for a in args.vm.devices[device_type].get_assigned_devices():
             if a.ident == device['dev_id'] and a.backend_domain == device['backend']:
                 current_assignment = a
                 if current_assignment.options != device['options']:
                     # detach and attach again to adjust options
-                    args.vm.devices[device_type].detach(current_assignment)
+                    args.vm.devices[device_type].unassign(current_assignment)
                     msg_options = '(' + ', '.join(
                         '{}={}'.format(key, value) for key, value in current_assignment.options.items()) + ')'
                     message_old = '[ATTACHED] ' + msg_options
@@ -1117,10 +1118,11 @@ def devices(vmname, *varargs, **kwargs):
                 assignment = qubesadmin.devices.DeviceAssignment(
                     backend_domain=args.vm.app.domains[device['backend']],
                     ident=device['dev_id'],
-                    options=device['options'],
-                    persistent=True)
+                    devclass=device_type,
+                    attach_automatically=True, required=True,
+                    options=device['options'])
 
-                args.vm.devices[device_type].attach(assignment)
+                args.vm.devices[device_type].assign(assignment)
                 message_new = '[ATTACHED] ' + msg_options
 
                 device_name = device['device_type'] + ':' + device['backend'] + ':' + device['dev_id']
@@ -1141,10 +1143,11 @@ def devices(vmname, *varargs, **kwargs):
 
         try:
             assignment = qubesadmin.devices.DeviceAssignment(
-                backend_domain=args.vm.app.domains[device['backend']],
-                ident=device['dev_id'])
+                args.vm.app.domains[device['backend']],
+                device['dev_id'],
+                devclass=device_type)
 
-            args.vm.devices[device_type].detach(assignment)
+            args.vm.devices[device_type].unassign(assignment)
 
             message_old = '[ATTACHED]'
             message_new = '[DETACHED]'
