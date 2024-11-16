@@ -37,7 +37,7 @@ from module_utils import Status  # pylint: disable=F0401
 from nulltype import Null
 
 import qubesadmin
-import qubesadmin.devices
+import qubesadmin.device_protocol
 import qubesadmin.firewall
 
 # Enable logging
@@ -869,7 +869,7 @@ def prefs(vmname, *varargs, **kwargs):
         dest = property_map.get(dest, dest)
 
         if dest == 'pcidevs':
-            value_current = [str(dev.ident).replace('_', ':') for dev
+            value_current = [str(dev.port_id).replace('_', ':') for dev
                              in args.vm.devices['pci'].get_assigned_devices(required_only=True)]
         elif dest == 'pci_strictreset':
             value_current = all(not assignment.options.get('no-strict-reset', False)
@@ -920,7 +920,7 @@ def prefs(vmname, *varargs, **kwargs):
                 dev_id_api = dev_id.strip().replace(':', '_')
                 current_assignment = None
                 for a in args.vm.devices['pci'].get_assigned_devices(required_only=True):
-                    if a.ident == dev_id_api:
+                    if a.port_id == dev_id_api:
                         current_assignment = a
                 if current_assignment and \
                         pci_strictreset is not None and \
@@ -934,11 +934,11 @@ def prefs(vmname, *varargs, **kwargs):
                     options = {}
                     if pci_strictreset is not None:
                         options['no-strict-reset'] = not pci_strictreset
-                    assignment = qubesadmin.devices.DeviceAssignment(
+                    assignment = qubesadmin.device_protocol.DeviceAssignment.new(
                         args.vm.app.domains['dom0'],
                         dev_id_api,
                         devclass='pci',
-                        attach_automatically=True, required=True,
+                        mode="required",
                         options=options)
                     args.vm.devices['pci'].assign(assignment)
                 except qubesadmin.exc.DeviceAlreadyAttached:
@@ -1052,7 +1052,7 @@ def devices(vmname, *varargs, **kwargs):
     for device_type in args.vm.devices:
         for device in args.vm.devices[device_type].get_assigned_devices():
             current_devices.append(
-                {'device_type': device_type, 'backend': device.backend_domain.name, 'dev_id': device.ident,
+                {'device_type': device_type, 'backend': device.backend_domain.name, 'dev_id': device.port_id,
                  'options': device.options})
 
     # Return all current devices if a 'list' only was selected
@@ -1100,7 +1100,7 @@ def devices(vmname, *varargs, **kwargs):
         device_skip = False
         message_old = None
         for a in args.vm.devices[device_type].get_assigned_devices():
-            if a.ident == device['dev_id'] and a.backend_domain == device['backend']:
+            if a.port_id == device['dev_id'] and a.backend_domain == device['backend']:
                 current_assignment = a
                 if current_assignment.options != device['options']:
                     # detach and attach again to adjust options
@@ -1115,11 +1115,11 @@ def devices(vmname, *varargs, **kwargs):
         msg_options = '(' + ', '.join('{}={}'.format(key, value) for key, value in device['options'].items()) + ')'
         if not device_skip:
             try:
-                assignment = qubesadmin.devices.DeviceAssignment(
+                assignment = qubesadmin.device_protocol.DeviceAssignment.new(
                     backend_domain=args.vm.app.domains[device['backend']],
-                    ident=device['dev_id'],
+                    port_id=device['dev_id'],
                     devclass=device_type,
-                    attach_automatically=True, required=True,
+                    mode="required",
                     options=device['options'])
 
                 args.vm.devices[device_type].assign(assignment)
@@ -1142,7 +1142,7 @@ def devices(vmname, *varargs, **kwargs):
         device_type = device['device_type']
 
         try:
-            assignment = qubesadmin.devices.DeviceAssignment(
+            assignment = qubesadmin.device_protocol.DeviceAssignment(
                 args.vm.app.domains[device['backend']],
                 device['dev_id'],
                 devclass=device_type)
