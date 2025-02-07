@@ -248,6 +248,7 @@ default value.
             - include-in-backups: True
             - netvm:              sys-firewall
             - pcidevs:            ['04:00.0']
+            - pci-strictreset:    false
             - kernel:             default
             - vcpus:              2
             - kernelopts:         nopat iommu=soft swiotlb=8192
