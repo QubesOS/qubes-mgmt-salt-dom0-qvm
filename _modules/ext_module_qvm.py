@@ -864,7 +864,7 @@ def prefs(vmname, *varargs, **kwargs):
     changed = False
     for key in selected_properties:
 
-        # Qubes keys are stored with underscrores ('_'), not hyphens ('-')
+        # Qubes keys are stored with underscores ('_'), not hyphens ('-')
         dest = key.replace('-', '_')
         dest = property_map.get(dest, dest)
 
@@ -917,16 +917,33 @@ def prefs(vmname, *varargs, **kwargs):
         if dest == 'pcidevs':
             value_combined = value_current[:]
             for dev_id in value_new:
-                dev_id_api = dev_id.strip().replace(':', '_')
+                if not dev_id.startswith('*'):
+                    # proper qubes pci ID should have single `:`
+                    dev_id_api = dev_id.strip().replace(':', '_', 1)
+                else:
+                    dev_id_api = dev_id.strip()
+                v_dev = qubesadmin.device_protocol.VirtualDevice.from_str(
+                    dev_id_api, "pci", args.vm.app.domains,
+                    backend=args.vm.app.domains["dom0"])
+                # loads device_id if not given
+                if not v_dev.is_device_id_set:
+                    dev = args.vm.app.domains['dom0'].devices['pci'][v_dev.port_id]
+                    if dev.device_id != qubesadmin.device_protocol.UnknownDevice.from_device(v_dev).device_id:
+                        v_dev = v_dev.clone(device_id=dev.device_id)
+                    else:
+                        _status = qvm.save_status(
+                            retcode=1,
+                            message=f"PCI device {dev_id_api} does not exist.")
+                        return qvm.status()
                 current_assignment = None
                 for a in args.vm.devices['pci'].get_assigned_devices(required_only=True):
-                    if a.port_id == dev_id_api:
+                    if a == v_dev:
                         current_assignment = a
                 if current_assignment and \
                         pci_strictreset is not None and \
                         current_assignment.options.get('no-strict-reset', False) != \
                             (not pci_strictreset):
-                    # detach and attach again to adjust options
+                    # unassign and assign again to adjust options
                     args.vm.devices['pci'].unassign(current_assignment)
                     value_combined.remove(dev_id)
 
@@ -934,12 +951,8 @@ def prefs(vmname, *varargs, **kwargs):
                     options = {}
                     if pci_strictreset is not None:
                         options['no-strict-reset'] = not pci_strictreset
-                    assignment = qubesadmin.device_protocol.DeviceAssignment.new(
-                        args.vm.app.domains['dom0'],
-                        dev_id_api,
-                        devclass='pci',
-                        mode="required",
-                        options=options)
+                    assignment = qubesadmin.device_protocol.DeviceAssignment(
+                        v_dev, mode="required", options=options)
                     args.vm.devices['pci'].assign(assignment)
                 except qubesadmin.exc.DeviceAlreadyAttached:
                     continue
