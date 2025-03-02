@@ -208,12 +208,14 @@ def check(vmname, *varargs, **kwargs):
         # Optional Flags
         - flags:
           - quiet
+          - template
     """
     # Hide 'check' flag from argv as its not a valid qvm.check option
     qvm = _QVMBase('qvm.check', **kwargs)
     qvm.argparser.options['hide'] = ['check']
 
     qvm.parser.add_argument('--quiet', action='store_true', help='Quiet')
+    qvm.parser.add_argument('--template', action='store_true', help='Check if it is template')
     qvm.parser.add_argument(
         'vmname',
         action=_VMAction,
