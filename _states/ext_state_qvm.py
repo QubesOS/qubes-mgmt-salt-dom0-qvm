@@ -472,11 +472,10 @@ def template_installed(name, fromrepo=None, pool=None, **kwargs):
         Install into given storage pool. Will not move already installed template.
     """
     ret = {'name': name, 'result': False, 'changes': {}, 'comment': ''}
-    info = __salt__['qvm.template_info'](name)
-    if info:
+    status = __salt__['qvm.check'](name, flags=['template'])
+    if status.passed():
         ret['result'] = True
-        ret['comment'] = 'Template {} version {} already installed'.format(
-                info['name'], info['version'])
+        ret['comment'] = 'Template {} already installed'.format(name)
         return ret
     if __opts__['test']:
         ret['result'] = None
