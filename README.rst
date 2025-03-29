@@ -372,6 +372,29 @@ Manage vmname tags.
             # list: []
             # list: [string,]
 
+``qvm.firewall``
+---------------
+
+Set vmname firewall rules.
+
+.. code-block:: yaml
+
+    qvm-firewall-id:
+        qvm.firewall:
+            - name: <vmname>
+            - set:
+                - 'action=accept dsthost=example.com'
+                - 'action=accept specialtarget=dns'
+                - 'action=drop'
+
+List vmname firewall rules.
+
+.. code-block:: yaml
+
+    qvm-firewall-list-id:
+        qvm.firewall:
+            - name: <vmname>
+            - list
 
 ``qvm.template_installed``
 ---------------
@@ -483,6 +506,9 @@ Sample test VM creation containing all of the state actions:
             - del:
                 - tag3
                 - tag4
+        - firewall:
+            - set:
+                - 'action=accept'
         - start: []
         - running: []
         - pause: []
