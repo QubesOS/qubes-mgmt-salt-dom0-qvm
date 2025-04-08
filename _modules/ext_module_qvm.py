@@ -37,6 +37,7 @@ from module_utils import Status  # pylint: disable=F0401
 from nulltype import Null
 
 import qubesadmin
+import qubesadmin.exc
 import qubesadmin.device_protocol
 import qubesadmin.firewall
 
@@ -917,6 +918,7 @@ def prefs(vmname, *varargs, **kwargs):
         # Execute command (will not execute in test mode)
         # pylint: disable=W0212
         if dest == 'pcidevs':
+            pci_changed = False
             value_combined = value_current[:]
             for dev_id in value_new:
                 if not dev_id.startswith('*'):
@@ -948,6 +950,9 @@ def prefs(vmname, *varargs, **kwargs):
                     # unassign and assign again to adjust options
                     args.vm.devices['pci'].unassign(current_assignment)
                     value_combined.remove(dev_id)
+                elif current_assignment:
+                    # no change necessary
+                    continue
 
                 try:
                     options = {}
@@ -956,14 +961,16 @@ def prefs(vmname, *varargs, **kwargs):
                     assignment = qubesadmin.device_protocol.DeviceAssignment(
                         v_dev, mode="required", options=options)
                     args.vm.devices['pci'].assign(assignment)
-                except qubesadmin.exc.DeviceAlreadyAttached:
+                except qubesadmin.exc.DeviceAlreadyAssigned:
                     continue
                 value_combined.append(dev_id)
                 changed = True
-            status = qvm.save_status(retcode=0)
-            status.changes.setdefault(data['key'], {})
-            status.changes[data['key']]['old'] = data['value_old']
-            status.changes[data['key']]['new'] = value_combined
+                pci_changed = True
+            if pci_changed:
+                status = qvm.save_status(retcode=0)
+                status.changes.setdefault(data['key'], {})
+                status.changes[data['key']]['old'] = data['value_old']
+                status.changes[data['key']]['new'] = value_combined
         else:
             log.info("Setting %s to %s", dest, value_new)
             if value_new == '*default*':
