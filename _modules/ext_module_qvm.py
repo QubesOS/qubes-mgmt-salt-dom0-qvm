@@ -872,7 +872,7 @@ def prefs(vmname, *varargs, **kwargs):
         dest = property_map.get(dest, dest)
 
         if dest == 'pcidevs':
-            value_current = [str(dev.port_id).replace('_', ':') for dev
+            value_current = [str(dev.port_id) for dev
                              in args.vm.devices['pci'].get_assigned_devices(required_only=True)]
         elif dest == 'pci_strictreset':
             value_current = all(not assignment.options.get('no-strict-reset', False)
