@@ -684,6 +684,7 @@ def prefs(vmname, *varargs, **kwargs):
           # control use qvm.device (TBD)
         - pci-strictreset:      true|false
         - pcidevs:              [string,]
+        - provides-network:     true|false
         - template:             <string>
         - qrexec-timeout:       <int> (60)
         - vcpus:                <int>
@@ -815,8 +816,13 @@ def prefs(vmname, *varargs, **kwargs):
         default=True
     )
     properties.add_argument('--pcidevs', nargs='*', default=[])
-    properties.add_argument('--provides-network', nargs=1, type=bool,
-                            default=False)
+    properties.add_argument(
+        '--provides-network',
+        '--provides_network',
+        nargs=1,
+        type=bool,
+        default=False
+    )
     properties.add_argument('--template', nargs=1)
     properties.add_argument(
         '--qrexec-timeout',
