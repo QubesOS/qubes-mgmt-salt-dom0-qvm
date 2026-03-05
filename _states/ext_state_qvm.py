@@ -75,7 +75,7 @@ import logging
 # Import salt libs
 from salt.exceptions import (CommandExecutionError, SaltInvocationError)
 from salt.output import nested
-from salt.utils.odict import OrderedDict as _OrderedDict
+from salt.utils.datastructures import OrderedDict as _OrderedDict
 
 # Import custom libs
 import qubes_utils  # pylint: disable=F0401
