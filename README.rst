@@ -158,6 +158,7 @@ Make sure the named VM is present.  VM will be created if missing.
             - label: red
             - mem: 3000
             - vcpus: 4
+            - class: AppVM
             - root-move-from: </path/xxx>
             - root-copy-from: </path/xxx>
             - flags:
@@ -473,6 +474,7 @@ Sample test VM creation containing all of the state actions:
             - label: red
             - mem: 3000
             - vcpus: 4
+            - class: AppVM
             - flags:
                 - proxy
         - exists: []
