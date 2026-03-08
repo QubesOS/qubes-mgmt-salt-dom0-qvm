@@ -137,7 +137,10 @@ def _state_action(_action, *varargs, **kwargs):
         status = __salt__[_action](*varargs, **kwargs)
     except (SaltInvocationError, CommandExecutionError) as err:
         status = Status(retcode=1, result=False, stderr=err.message + '\n')
-    return vars(status)
+    ret = vars(status)
+    if ret.get('retcode', 0) != 0:
+        ret['result'] = False
+    return ret
 
 
 def exists(name, *varargs, **kwargs):
