@@ -40,6 +40,7 @@ import qubesadmin
 import qubesadmin.exc
 import qubesadmin.device_protocol
 import qubesadmin.firewall
+from qubesadmin.vm import POWER_STATES
 
 # Enable logging
 log = logging.getLogger(__name__)
@@ -271,7 +272,7 @@ def state(vmname, *varargs, **kwargs):
         - name:                 <vmname>
 
         # Optional Positional
-        - state:                (status)|running|halted|transient|paused
+        - state: (status)|transient|starting|running|paused|suspended|halting|crashed|halted
     """
     qvm = _QVMBase('qvm.state', **kwargs)
     qvm.parser.add_argument(
@@ -283,7 +284,7 @@ def state(vmname, *varargs, **kwargs):
         'state',
         nargs='*',
         default='status',
-        choices=('status', 'running', 'halted', 'transient', 'paused'),
+        choices=('status', *[s.lower() for s in POWER_STATES]),
         help='Check power state of virtual machine'
     )
     args = qvm.parse_args(vmname, *varargs, **kwargs)
@@ -293,9 +294,8 @@ def state(vmname, *varargs, **kwargs):
     stdout = args.vm.get_power_state()
     power_state = stdout.strip().lower()
 
-    if 'status' not in args.state:
-        if power_state not in args.state:
-            retcode = 1
+    if 'status' not in args.state and power_state not in args.state:
+        retcode = 1
 
     # Create status
     status = Status(
@@ -2049,36 +2049,6 @@ def start(vmname, *varargs, **kwargs):
     )
     args = qvm.parse_args(vmname, *varargs, **kwargs)
 
-    def start_guid():
-        """
-        Prevent startup status showing as `Transient`.
-        """
-        try:
-            if not args.vm.is_guid_running():
-                args.vm.start_guid()
-        except AttributeError:
-            # AttributeError: CEncodingAwareStringIO instance has no attribute 'fileno'
-            pass
-
-    def is_transient():
-        """
-        Start guid if VM is `transient`.
-        """
-        transient_status = state(args.vmname, *['transient'])
-        if transient_status.passed():
-            if __opts__['test']:
-                message = '\'guid\' will be started since in \'transient\' state!'
-                qvm.save_status(transient_status, message=message)
-                return qvm.status()
-
-            # 'start_guid' then confirm 'running' power state
-            start_guid()
-            return not is_running(
-                qvm,
-                error_message='\'guid\' failed to start!'
-            )
-        return False
-
     # No need to start if VM is already 'running'
     if is_running(qvm):
         return qvm.status()
@@ -2094,7 +2064,11 @@ def start(vmname, *varargs, **kwargs):
         if not resume_status:
             return qvm.status()
 
-    if is_transient():
+    def is_starting() -> bool:
+        starting_status = state(args.vmname, *['transient', 'starting'])
+        return starting_status.passed()
+
+    if is_starting():
         return qvm.status()
 
     # Execute command (will not execute in test mode)
@@ -2103,9 +2077,8 @@ def start(vmname, *varargs, **kwargs):
 
     # Confirm VM has been started (don't fail in test mode)
     if not __opts__['test']:
-        if is_transient():
+        if is_starting():
             return qvm.status()
-
         is_running(qvm)
 
     # Returns the status 'data' dictionary
@@ -2186,7 +2159,7 @@ def shutdown(vmname, *varargs, **kwargs):
         """
         Kill if transient and `force` option enabled.
         """
-        transient_status = state(args.vmname, *['transient'])
+        transient_status = state(args.vmname, *['transient', 'starting', 'halting'])
         if transient_status.passed():
             if __opts__['test']:
                 force = set(['force', 'kill']).intersection(kwargs)
