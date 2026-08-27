@@ -105,7 +105,7 @@ qvm-present-id:
     - name: {{ test_vm_name }}
     - template: fedora-21
     - label: red
-    - mem: 3000
+    - memory: 3000
     - vcpus: 4
     # root-move-from: </path/xxx>
     # root-copy-from: </path/xxx>
@@ -358,7 +358,7 @@ qvm-vm-id:
     - present:
       - template: fedora-21
       - label: red
-      - mem: 3000
+      - memory: 3000
       - vcpus: 4
       - flags:
         - proxy

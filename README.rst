@@ -156,7 +156,7 @@ Make sure the named VM is present.  VM will be created if missing.
             - name: <vmname>
             - template: fedora-21
             - label: red
-            - mem: 3000
+            - memory: 3000
             - vcpus: 4
             - class: AppVM
             - root-move-from: </path/xxx>
@@ -472,7 +472,7 @@ Sample test VM creation containing all of the state actions:
         - present:
             - template: fedora-21
             - label: red
-            - mem: 3000
+            - memory: 3000
             - vcpus: 4
             - class: AppVM
             - flags:

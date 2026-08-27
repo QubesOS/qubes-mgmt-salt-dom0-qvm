@@ -334,7 +334,7 @@ def create(vmname, *varargs, **kwargs):
         - template:             <template>
         - label:                <label>
         - class:                <class>
-        - mem:                  <mem>
+        - memory:               <memory>
         - vcpus:                <vcpus>
         - root-move-from:       <root_move>
         - root-copy-from:       <root_copy>
@@ -394,7 +394,9 @@ def create(vmname, *varargs, **kwargs):
              ' - see documentation for qvm-create for possible values)'
     )
     qvm.parser.add_argument(
+        '--memory',
         '--mem',
+        dest='memory',
         nargs=1,
         help=
         'Specify the initial memory size of the VM'
@@ -424,8 +426,8 @@ def create(vmname, *varargs, **kwargs):
         vmclass = args.klass[0]
 
     properties = {}
-    if args.mem:
-        properties['memory'] = args.mem[0]
+    if args.memory:
+        properties['memory'] = args.memory[0]
     if args.vcpus:
         properties['vcpus'] = args.vcpus[0]
     if args.hvm:
